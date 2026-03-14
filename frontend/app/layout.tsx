@@ -57,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </aside>
 
-            <main className="relative h-full flex-1 overflow-hidden bg-[#f9f3f7]">
+            <main className="relative h-full flex-1 overflow-hidden bg-[#f5f5f4]">
               <div className="absolute left-0 top-0 z-50 w-full bg-white">
                 <div className="flex h-14 w-full items-center justify-between px-4 md:px-5" />
               </div>

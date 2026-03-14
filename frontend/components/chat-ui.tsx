@@ -82,20 +82,20 @@ function LandingView({
       <div className="mx-auto mt-[11vh] flex w-full max-w-[940px] flex-col items-center px-8 md:mt-[14vh] md:px-6">
         <div className="text-center">
           <p className="brand-serif text-[44px] text-[#2563eb] md:text-[68px]">Acquerello Scheduled</p>
-          <h1 className="nav-caps mt-4 text-[11px] leading-[1.3] text-[#101828] md:text-[17px]">
+          <h1 className="nav-caps mt-4 text-[22px] leading-[1.3] text-[#101828] md:text-[34px]">
             Ready to generate kitchen schedule?
           </h1>
         </div>
 
-        <div className="content-panel mt-10 flex w-full max-w-[860px] flex-col rounded-[26px] p-6 md:mt-12 md:min-h-[350px] md:p-7">
+        <div className="content-panel mt-10 flex w-full max-w-[860px] flex-col rounded-[26px] p-7 md:mt-12 md:min-h-[350px] md:p-8">
           <Textarea
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
             placeholder="tell me what is different this week"
-            className="min-h-[188px] resize-none border-0 bg-transparent px-5 py-4 text-[18px] text-[#111827] shadow-none ring-0 placeholder:text-[#c7cdd7] focus:border-0 focus:ring-0 md:min-h-[220px] md:px-7 md:py-5 md:text-[22px]"
+            className="min-h-[188px] resize-none border-0 bg-transparent px-7 py-6 text-[18px] text-[#111827] shadow-none ring-0 placeholder:text-[#c7cdd7] focus:border-0 focus:ring-0 md:min-h-[220px] md:px-9 md:py-7 md:text-[22px]"
           />
 
-          <div className="mt-10 flex items-center justify-end gap-6 pr-6 pb-5 md:mt-12 md:gap-7 md:pr-4 md:pb-3">
+          <div className="mt-12 flex items-center justify-end gap-7 pr-8 pb-6 md:mt-14 md:gap-8 md:pr-6 md:pb-5">
             <Button
               type="button"
               size="icon"
@@ -119,8 +119,7 @@ function LandingView({
         </div>
 
         <p className="mt-10 max-w-[700px] text-center text-[15px] leading-8 text-[#667085]">
-          Speak naturally about time off, service level changes, station coverage, or training goals. The assistant
-          will translate it into a clean schedule draft before generation.
+          Speak naturally about time off, service level changes, station coverage, or training goals.
         </p>
       </div>
     </div>
