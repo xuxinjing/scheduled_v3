@@ -1,0 +1,31 @@
+{
+  "_comment": "Drift guard \u2014 hashes of human-editable truth sources vs machine truth. Run sync_manifest.py after any manual sync between markdown and code/JSON.",
+  "sources": {
+    "kitchen_state.md": {
+      "path": "kitchen_state.md",
+      "hash": "9657cbaf50d6effa6b63496dc9850926",
+      "role": "Human-readable static truth",
+      "machine_mirror": "src/kitchen_data.py"
+    },
+    "week_constraints.md": {
+      "path": "week_constraints.md",
+      "hash": "8f646d8f24d09d45c3561af24c6e98f0",
+      "role": "Human-readable weekly notes",
+      "machine_mirror": "week_config.json"
+    }
+  },
+  "machine_truth": {
+    "src/kitchen_data.py": {
+      "path": "src/kitchen_data.py",
+      "hash": "1b7f141f650996dd5d69dae748aa4043",
+      "role": "Stable machine truth \u2014 roster/capabilities/stations"
+    },
+    "week_config.json": {
+      "path": "week_config.json",
+      "hash": "5e7fd72be3c9698fa3f76e9494a7bd6e",
+      "role": "Weekly machine input \u2014 only file AI edits"
+    }
+  },
+  "last_synced_by": "sync_manifest.py",
+  "last_synced_at": "2026-03-08 23:31"
+}

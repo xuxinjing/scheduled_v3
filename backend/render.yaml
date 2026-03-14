@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: acquerello-scheduler-backend
+    env: docker
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /ready
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_INTEGRITY_MODEL
+        sync: false
+      - key: INTEGRITY_CHECK_MODE
+        value: required
+      - key: FRONTEND_URL
+        sync: false
+      - key: APP_ENV
+        value: production

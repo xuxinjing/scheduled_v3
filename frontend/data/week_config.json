@@ -1,0 +1,42 @@
+{
+  "_comment": "Weekly scheduling input — only file AI needs to edit for a normal week.",
+  "_doc": "See CONSTRAINT_TYPES.md for all supported constraint fields and valid values.",
+
+  "week_start": "2026-03-02",
+
+  "service_levels": {
+    "Tuesday":   "mid",
+    "Wednesday": "mid",
+    "Thursday":  "peak",
+    "Friday":    "peak",
+    "Saturday":  "peak"
+  },
+
+  "unavailable": {
+    "Chef": ["Tuesday"]
+  },
+
+  "forced_days": {
+    "Sam":       ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "Kate":      ["Tuesday", "Wednesday", "Thursday"],
+    "Chris":     ["Friday", "Saturday"],
+    "Echo":      ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "Sebastian": ["Tuesday", "Wednesday"]
+  },
+
+  "training_shadows": {
+    "Echo": {"days": ["Tuesday", "Wednesday"], "station": "Stuzz"}
+  },
+
+  "weekly_capability_grants": {
+    "Echo": {"days": ["Thursday", "Friday", "Saturday"], "station": "Stuzz", "level": "stable"}
+  },
+
+  "notes": [
+    "CDC back this week.",
+    "Chef off Tuesday only.",
+    "Sam must work 5 days — Pasta station; trains on Sauté alongside Brandon (counts 0 for Sauté coverage).",
+    "Kate/Chris pre-split on Mids to avoid deadlock: Kate takes Tue-Thu, Chris takes Fri-Sat.",
+    "Echo: Tue/Wed shadow training on Stuzz alongside Sebastian (counts 0). Thu–Sat runs Stuzz solo (chef-approved). Echo forced all 5 days."
+  ]
+}
