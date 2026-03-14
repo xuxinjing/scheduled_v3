@@ -17,28 +17,35 @@ const nav = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="grain">
-        <div className="mx-auto min-h-screen max-w-[1680px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-          <header className="mb-6 flex flex-col gap-4 rounded-[2rem] border border-white/60 bg-white/70 px-5 py-4 shadow-panel backdrop-blur md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.32em] text-[hsl(var(--muted-foreground))]">
-                Acquerello Scheduling Engine
-              </p>
-              <h1 className="font-[family-name:var(--font-heading)] text-2xl text-[hsl(var(--foreground))]">
-                Voice-first weekly scheduling
-              </h1>
-            </div>
-            <nav className="flex flex-wrap gap-2">
+      <body>
+        <div className="mx-auto min-h-screen max-w-5xl px-4 pb-8 pt-4 sm:px-6">
+          <header className="mb-5 rounded-2xl border border-[hsl(var(--border))] bg-white">
+            <div className="flex flex-col gap-4 px-4 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--muted-foreground))]">
+                    scheduled v3
+                  </p>
+                  <h1 className="mt-1 text-xl font-semibold tracking-tight text-[hsl(var(--foreground))] sm:text-2xl">
+                    Acquerello Scheduler
+                  </h1>
+                  <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+                    Voice-first weekly scheduling built for phone and tablet.
+                  </p>
+                </div>
+              </div>
+              <nav className="grid grid-cols-3 gap-2">
               {nav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-full border border-[hsl(var(--border))] bg-white/80 px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] transition hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]"
+                  className="flex items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2.5 text-sm font-medium text-[hsl(var(--foreground))] transition hover:bg-[hsl(var(--secondary))]"
                 >
                   {item.label}
                 </Link>
               ))}
-            </nav>
+              </nav>
+            </div>
           </header>
           {children}
         </div>

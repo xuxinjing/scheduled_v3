@@ -1,4 +1,5 @@
 import { HistoryDetailShell } from "@/components/history-detail-shell";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Params = {
   params: Promise<{
@@ -8,5 +9,17 @@ type Params = {
 
 export default async function HistoryDetailPage({ params }: Params) {
   const { scheduleId } = await params;
-  return <HistoryDetailShell scheduleId={scheduleId} />;
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Schedule detail</CardTitle>
+          <CardDescription>
+            Review one saved run, including warnings, validator output, and downloadable artifacts.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+      <HistoryDetailShell scheduleId={scheduleId} />
+    </div>
+  );
 }

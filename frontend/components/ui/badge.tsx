@@ -7,18 +7,18 @@ type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
 };
 
 const styles: Record<NonNullable<BadgeProps["variant"]>, string> = {
-  default: "bg-[hsl(var(--primary))]/12 text-[hsl(var(--primary))]",
-  success: "bg-[hsl(var(--success))]/12 text-[hsl(var(--success))]",
-  warning: "bg-[hsl(var(--warning))]/14 text-[hsl(var(--foreground))]",
-  danger: "bg-[hsl(var(--danger))]/12 text-[hsl(var(--danger))]",
-  muted: "bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]",
+  default: "border border-[hsl(var(--accent))] bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]",
+  success: "border border-[hsl(var(--success))]/15 bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
+  warning: "border border-[hsl(var(--warning))]/15 bg-[hsl(var(--warning))]/10 text-[#b45309]",
+  danger: "border border-[hsl(var(--danger))]/15 bg-[hsl(var(--danger))]/10 text-[hsl(var(--danger))]",
+  muted: "border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]",
 };
 
 export function Badge({ className, variant = "default", ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]",
+        "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em]",
         styles[variant],
         className,
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, LoaderCircle, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, LoaderCircle, Send, Sparkles } from "lucide-react";
 import { startTransition, useDeferredValue, useEffect, useState } from "react";
 
 import { ReasoningStream } from "@/components/reasoning-stream";
@@ -24,9 +24,7 @@ function makeMessage(role: ChatMessage["role"], content: string): ChatMessage {
 }
 
 function parseSseEvent(raw: string): ReasoningEvent | null {
-  const payloadLine = raw
-    .split("\n")
-    .find((line) => line.startsWith("data:"));
+  const payloadLine = raw.split("\n").find((line) => line.startsWith("data:"));
   if (!payloadLine) {
     return null;
   }
@@ -63,11 +61,21 @@ function buildWeekConstraintsMarkdown(weekConfig: WeekConfig) {
   return sections.join("\n");
 }
 
+function stateLabel(state: WorkflowState) {
+  if (state === "listening") return { text: "Listening", variant: "default" as const };
+  if (state === "processing") return { text: "Interpreting", variant: "warning" as const };
+  if (state === "confirming") return { text: "Ready to confirm", variant: "success" as const };
+  if (state === "revising") return { text: "Revision mode", variant: "muted" as const };
+  if (state === "generating") return { text: "Generating", variant: "warning" as const };
+  if (state === "done") return { text: "Schedule ready", variant: "success" as const };
+  return { text: "Waiting", variant: "muted" as const };
+}
+
 export function ChatUI() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     makeMessage(
       "assistant",
-      "Tell me the week naturally. Mention service levels, days off, training, and anything operationally sharp.",
+      "Tell me the week naturally. Mention service levels, days off, training, and any operational notes that matter.",
     ),
   ]);
   const [input, setInput] = useState("");
@@ -75,12 +83,13 @@ export function ChatUI() {
   const [draftWeekConfig, setDraftWeekConfig] = useState<WeekConfig | null>(null);
   const [reasoningEvents, setReasoningEvents] = useState<ReasoningEvent[]>([]);
   const [schedule, setSchedule] = useState<ScheduleRun | null>(null);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("chef@example.com");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
 
   const deferredMessages = useDeferredValue(messages);
+  const stateMeta = stateLabel(state);
 
   useEffect(() => {
     void fetch("/api/restaurant")
@@ -108,9 +117,7 @@ export function ChatUI() {
 
     const response = await fetch("/api/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: nextMessages }),
     });
     const payload = (await response.json()) as ChatResponse & { error?: string };
@@ -131,6 +138,7 @@ export function ChatUI() {
     if (!draftWeekConfig) {
       return;
     }
+
     try {
       setState("generating");
       setSchedule(null);
@@ -140,9 +148,7 @@ export function ChatUI() {
       const weekConstraintsMd = buildWeekConstraintsMarkdown(draftWeekConfig);
       const response = await fetch("/api/schedule/stream", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           week_config: draftWeekConfig,
           week_constraints_md: weekConstraintsMd,
@@ -203,16 +209,14 @@ export function ChatUI() {
     }
   }
 
-  async function sendEmailPlaceholder() {
+  async function sendScheduleEmail() {
     if (!schedule) {
       return;
     }
     setSendingEmail(true);
     const response = await fetch("/api/email", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         schedule_id: schedule.schedule_id,
         recipient_email: recipientEmail,
@@ -237,156 +241,171 @@ export function ChatUI() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-      <div className="space-y-6">
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b border-[hsl(var(--border))]/60 bg-oven-glow">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 pb-24">
+      <Card>
+        <CardHeader className="border-b border-[hsl(var(--border))]">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle>Chef conversation</CardTitle>
+                <CardTitle>This week</CardTitle>
                 <CardDescription>
-                  Speak or type the weekly notes. The assistant converts them into a confirmed machine config.
+                  Speak or type the chef notes, confirm the interpretation, then send the schedule.
                 </CardDescription>
               </div>
-              <Badge variant={state === "done" ? "success" : state === "generating" ? "warning" : "default"}>
-                {state}
-              </Badge>
+              <Badge variant={stateMeta.variant}>{stateMeta.text}</Badge>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-5 pt-6">
-            {bootLoading && (
-              <div className="flex items-center gap-2 rounded-[1.25rem] bg-[hsl(var(--muted))]/60 px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-                Loading restaurant defaults...
-              </div>
-            )}
-            <div className="scrollbar-thin max-h-[420px] space-y-4 overflow-y-auto rounded-[1.75rem] border border-[hsl(var(--border))]/70 bg-white/60 p-4">
+            <div className="flex flex-wrap gap-2 text-sm text-[hsl(var(--muted-foreground))]">
+              <span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-1">1. Capture notes</span>
+              <span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-1">2. Confirm summary</span>
+              <span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-1">3. Generate and send</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-5">
+          {bootLoading && (
+            <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary))]/65 px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              Loading restaurant defaults...
+            </div>
+          )}
+
+          <VoiceInput
+            disabled={state === "processing" || state === "generating"}
+            onRecordingStateChange={({ isRecording, isTranscribing }) => {
+              if (isRecording) {
+                setState("listening");
+              } else if (isTranscribing) {
+                setState("processing");
+              } else {
+                setState((current) => (current === "listening" ? "idle" : current));
+              }
+            }}
+            onTranscript={async (text) => {
+              await sendMessage(text);
+            }}
+          />
+
+          <div className="rounded-xl border border-[hsl(var(--border))] bg-white">
+            <div className="max-h-[340px] space-y-3 overflow-y-auto p-4">
               {deferredMessages.map((message) => (
                 <div
                   key={message.id}
-                  className={`max-w-[88%] rounded-[1.5rem] px-4 py-3 ${
-                    message.role === "assistant"
-                      ? "bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"
-                      : "ml-auto bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
-                  }`}
+                  className={message.role === "assistant" ? "max-w-[92%]" : "ml-auto max-w-[92%]"}
                 >
-                  <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                  <div
+                    className={
+                      message.role === "assistant"
+                        ? "rounded-2xl rounded-tl-md bg-[hsl(var(--secondary))] px-4 py-3 text-sm leading-6 text-[hsl(var(--foreground))]"
+                        : "rounded-2xl rounded-tr-md bg-[hsl(var(--primary))] px-4 py-3 text-sm leading-6 text-white"
+                    }
+                  >
+                    {message.content}
+                  </div>
                 </div>
               ))}
             </div>
-
-            <VoiceInput
-              disabled={state === "processing" || state === "generating"}
-              onRecordingStateChange={({ isRecording, isTranscribing }) => {
-                if (isRecording) {
-                  setState("listening");
-                } else if (isTranscribing) {
-                  setState("processing");
-                } else if (state === "listening") {
-                  setState("idle");
-                }
-              }}
-              onTranscript={async (text) => {
-                await sendMessage(text);
-              }}
-            />
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Input
-                value={input}
-                disabled={state === "processing" || state === "generating"}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void sendMessage(input);
-                  }
-                }}
-                placeholder="Type a revision or weekly note..."
-              />
-              <Button
-                type="button"
-                disabled={!input.trim() || state === "processing" || state === "generating"}
-                onClick={() => void sendMessage(input)}
-              >
-                {state === "processing" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Send
-              </Button>
-            </div>
-
-            {draftWeekConfig && (
-              <div className="rounded-[1.5rem] border border-[hsl(var(--border))] bg-white/80 p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[hsl(var(--primary))]" />
-                  <p className="font-medium">Current week_config draft</p>
-                </div>
-                <pre className="overflow-x-auto rounded-[1.25rem] bg-[hsl(var(--muted))]/70 p-4 text-xs leading-6 text-[hsl(var(--foreground))]">
-                  {JSON.stringify(draftWeekConfig, null, 2)}
-                </pre>
-              </div>
-            )}
-
-            {state === "confirming" && (
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={() => void runSchedule()}>Confirm and generate</Button>
-                <Button variant="secondary" onClick={() => setState("revising")}>
-                  Revise
+            <div className="border-t border-[hsl(var(--border))] p-4">
+              <div className="flex flex-col gap-3">
+                <Input
+                  value={input}
+                  disabled={state === "processing" || state === "generating"}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      void sendMessage(input);
+                    }
+                  }}
+                  placeholder="Type a note or correction"
+                />
+                <Button
+                  type="button"
+                  disabled={!input.trim() || state === "processing" || state === "generating"}
+                  onClick={() => void sendMessage(input)}
+                  className="w-full sm:w-auto"
+                >
+                  {state === "processing" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send note
                 </Button>
               </div>
-            )}
+            </div>
+          </div>
 
-            {schedule && (
-              <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[hsl(var(--border))] bg-white/75 p-4 sm:flex-row sm:flex-wrap">
+          {draftWeekConfig && (
+            <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary))]/55 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[hsl(var(--primary))]" />
+                <p className="text-sm font-medium text-[hsl(var(--foreground))]">Current machine draft</p>
+              </div>
+              <pre className="scrollbar-thin overflow-x-auto rounded-xl bg-white p-4 text-xs leading-6 text-[hsl(var(--foreground))]">
+                {JSON.stringify(draftWeekConfig, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {state === "confirming" && (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button onClick={() => void runSchedule()} className="flex-1 sm:flex-none">
+                <CheckCircle2 className="h-4 w-4" />
+                Confirm and generate
+              </Button>
+              <Button variant="secondary" onClick={() => setState("revising")} className="flex-1 sm:flex-none">
+                Revise notes
+              </Button>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-3 rounded-xl border border-[hsl(var(--danger))]/20 bg-[hsl(var(--danger))]/8 px-4 py-3 text-sm text-[hsl(var(--foreground))]">
+              <AlertTriangle className="mt-0.5 h-4 w-4 text-[hsl(var(--danger))]" />
+              <span>{error}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <ReasoningStream events={reasoningEvents} running={state === "generating"} />
+
+      {schedule ? (
+        <>
+          <SchedulePreview schedule={schedule} weekConfig={draftWeekConfig} />
+          <Card className="fixed bottom-0 left-0 right-0 z-30 rounded-none border-x-0 border-b-0 sm:static sm:rounded-2xl sm:border">
+            <CardContent className="space-y-3 pt-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Input
                   value={recipientEmail}
                   onChange={(event) => setRecipientEmail(event.target.value)}
                   type="email"
-                  className="sm:max-w-[280px]"
                   placeholder="chef@restaurant.com"
                 />
-                <Button disabled={sendingEmail} onClick={() => void sendEmailPlaceholder()}>
-                  {sendingEmail ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                  Send to email
+                <Button disabled={sendingEmail} onClick={() => void sendScheduleEmail()} className="sm:w-auto">
+                  {sendingEmail ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send
                 </Button>
-                <a className={buttonVariants({ variant: "secondary" })} href={`/api/history/${schedule.schedule_id}/artifacts/schedule_output.xlsx`}>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <a className={buttonVariants({ variant: "secondary", size: "sm" })} href={`/api/history/${schedule.schedule_id}/artifacts/schedule_output.xlsx`}>
                   Download Excel
                 </a>
-                <a className={buttonVariants({ variant: "ghost" })} href={`/history/${schedule.schedule_id}`}>
-                  Open history detail
+                <a className={buttonVariants({ variant: "ghost", size: "sm" })} href={`/history/${schedule.schedule_id}`}>
+                  View history
                 </a>
-                <Badge variant="muted">Schedule ID {schedule.schedule_id}</Badge>
-                {schedule.email_sent_at && <Badge variant="success">Sent</Badge>}
-              </div>
-            )}
-
-            {error && (
-              <div className="flex items-start gap-3 rounded-[1.5rem] border border-[hsl(var(--danger))]/20 bg-[hsl(var(--danger))]/10 px-4 py-3 text-sm text-[hsl(var(--foreground))]">
-                <AlertTriangle className="mt-0.5 h-4 w-4 text-[hsl(var(--danger))]" />
-                <span>{error}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-6">
-        <ReasoningStream events={reasoningEvents} running={state === "generating"} />
-        {schedule ? (
-          <SchedulePreview schedule={schedule} weekConfig={draftWeekConfig} />
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Preview area</CardTitle>
-              <CardDescription>The pivot preview slides in here after the reasoning stream completes.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-[1.5rem] border border-dashed border-[hsl(var(--border))] p-8 text-sm text-[hsl(var(--muted-foreground))]">
-                Confirm a draft week_config to generate the schedule preview.
+                <Badge variant="muted">{schedule.schedule_id.slice(0, 8)}</Badge>
+                {schedule.email_sent_at ? <Badge variant="success">Sent</Badge> : null}
               </div>
             </CardContent>
           </Card>
-        )}
-      </div>
+        </>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Preview</CardTitle>
+            <CardDescription>
+              The weekly pivot schedule will appear here once generation completes.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
     </div>
   );
 }

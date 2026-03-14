@@ -28,8 +28,8 @@ function statusIcon(event: ReasoningEvent) {
   return <LoaderCircle className="h-4 w-4 animate-spin text-[hsl(var(--primary))]" />;
 }
 
-function AnimatedLine({ event, active }: { event: ReasoningEvent; active: boolean }) {
-  const target = typeof event.content === "string" ? event.content : (event.summary ?? "");
+function ReasoningLine({ event, active }: { event: ReasoningEvent; active: boolean }) {
+  const target = typeof event.content === "string" ? event.content : event.summary ?? "";
   const [visible, setVisible] = useState(event.type === "phase" || event.type === "complete" ? target : "");
 
   useEffect(() => {
@@ -40,10 +40,9 @@ function AnimatedLine({ event, active }: { event: ReasoningEvent; active: boolea
       setVisible(target);
       return;
     }
-
     let frame = 0;
     let raf = 0;
-    const charsPerSecond = 52;
+    const charsPerSecond = 46;
     const step = () => {
       frame += 1;
       const count = Math.min(target.length, Math.floor((frame / 60) * charsPerSecond));
@@ -60,24 +59,19 @@ function AnimatedLine({ event, active }: { event: ReasoningEvent; active: boolea
   return (
     <div
       className={cn(
-        "flex gap-3 rounded-[1.25rem] border border-transparent px-3 py-3 transition",
-        event.type === "phase" && "animate-rise-in border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/7",
-        active && event.type !== "phase" && "bg-white/70",
+        "flex gap-3 rounded-xl border px-3 py-3 transition",
+        event.type === "phase"
+          ? "border-[hsl(var(--accent))] bg-[hsl(var(--accent))]/40"
+          : "border-[hsl(var(--border))] bg-white",
+        active && "border-[hsl(var(--primary))]/35",
       )}
     >
-      <div className={cn("mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90", active && "animate-pulse-soft")}>
+      <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--secondary))]">
         {statusIcon(event)}
       </div>
-      <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            "whitespace-pre-wrap text-sm leading-6 text-[hsl(var(--foreground))]",
-            event.type === "phase" && "font-[family-name:var(--font-heading)] text-base",
-          )}
-        >
-          {visible}
-        </p>
-      </div>
+      <p className={cn("min-w-0 flex-1 whitespace-pre-wrap text-sm leading-6", event.type === "phase" && "font-medium")}>
+        {visible}
+      </p>
     </div>
   );
 }
@@ -100,7 +94,7 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
 
   useEffect(() => {
     if (!running && events.some((event) => event.type === "complete")) {
-      const timeout = window.setTimeout(() => setCollapsed(true), 700);
+      const timeout = window.setTimeout(() => setCollapsed(true), 900);
       return () => window.clearTimeout(timeout);
     }
   }, [events, running]);
@@ -120,37 +114,43 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
   const activeIndex = running ? events.length - 1 : -1;
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="border-b border-[hsl(var(--border))]/60 pb-4">
+    <Card>
+      <CardHeader className="border-b border-[hsl(var(--border))]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Reasoning Stream</CardTitle>
+            <CardTitle>Schedule generation</CardTitle>
             <CardDescription>
-              Live integrity and solver feedback, paced for review instead of hidden behind a spinner.
+              Integrity check and solver progress stream here in real time.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            {running ? <Badge variant="warning">Live</Badge> : finalEvent ? <Badge variant="success">Ready</Badge> : <Badge variant="muted">Waiting</Badge>}
+            {running ? (
+              <Badge variant="warning">Live</Badge>
+            ) : finalEvent ? (
+              <Badge variant="success">Complete</Badge>
+            ) : (
+              <Badge variant="muted">Idle</Badge>
+            )}
             <Button variant="ghost" size="sm" onClick={() => setCollapsed((value) => !value)}>
-              {collapsed ? "Expand" : "Collapse"}
+              {collapsed ? "Show" : "Hide"}
               {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
             </Button>
           </div>
         </div>
       </CardHeader>
       {!collapsed && (
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="pt-5">
           <div
             ref={bodyRef}
-            className="scrollbar-thin max-h-[460px] space-y-3 overflow-y-auto rounded-[1.5rem] border border-[hsl(var(--border))]/60 bg-[hsl(var(--muted))]/40 p-4"
+            className="scrollbar-thin max-h-[360px] space-y-3 overflow-y-auto rounded-xl bg-[hsl(var(--secondary))]/55 p-3"
           >
             {events.length === 0 ? (
-              <div className="rounded-[1.25rem] border border-dashed border-[hsl(var(--border))] px-4 py-6 text-sm text-[hsl(var(--muted-foreground))]">
-                Confirm the interpreted week and the reasoning stream will start within the same screen.
+              <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-white px-4 py-5 text-sm text-[hsl(var(--muted-foreground))]">
+                Confirm the week and the system will stream its checks here.
               </div>
             ) : (
               events.map((event, index) => (
-                <AnimatedLine
+                <ReasoningLine
                   key={`${event.type}-${index}-${typeof event.content === "string" ? event.content : event.summary ?? "event"}`}
                   event={event}
                   active={index === activeIndex}
@@ -158,11 +158,6 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
               ))
             )}
           </div>
-          {running && (
-            <div className="overflow-hidden rounded-full bg-[hsl(var(--muted))]">
-              <div className="h-2 w-full animate-shimmer bg-[linear-gradient(90deg,transparent,rgba(170,96,52,0.7),transparent)] bg-[length:200%_100%]" />
-            </div>
-          )}
         </CardContent>
       )}
     </Card>

@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 function cellColor(cell: ScheduleRun["pivot_preview"]["rows"][number]["cells"][string]) {
   if (cell.text === "CLOSED") {
-    return "bg-stone-200 text-stone-500";
+    return "bg-slate-200 text-slate-500";
   }
   if (cell.text === "OFF") {
-    return "bg-stone-100 text-stone-400";
+    return "bg-slate-100 text-slate-500";
   }
   const coverage = new Set(cell.entries.map((entry) => entry.coverage_type));
   const shifts = new Set(cell.entries.map((entry) => entry.shift));
@@ -18,21 +18,21 @@ function cellColor(cell: ScheduleRun["pivot_preview"]["rows"][number]["cells"][s
     return "bg-violet-100 text-violet-900";
   }
   if (coverage.has("learning")) {
-    return "bg-amber-100 text-amber-950";
+    return "bg-amber-100 text-amber-900";
   }
   if (shifts.size === 1 && shifts.has("AM")) {
-    return "bg-sky-100 text-sky-950";
+    return "bg-sky-100 text-sky-900";
   }
   if (shifts.size === 1 && shifts.has("PM")) {
-    return "bg-orange-100 text-orange-950";
+    return "bg-orange-100 text-orange-900";
   }
-  return "bg-emerald-100 text-emerald-950";
+  return "bg-emerald-100 text-emerald-900";
 }
 
 const roleLabels: Record<string, string> = {
   leadership: "Leadership",
-  pm_staff: "PM Line",
-  am_staff: "AM Prep",
+  pm_staff: "PM line",
+  am_staff: "AM prep",
 };
 
 export function SchedulePreview({ schedule, weekConfig }: { schedule: ScheduleRun; weekConfig: WeekConfig | null }) {
@@ -43,48 +43,48 @@ export function SchedulePreview({ schedule, weekConfig }: { schedule: ScheduleRu
   }, {});
 
   return (
-    <Card className="animate-rise-in overflow-hidden">
-      <CardHeader className="border-b border-[hsl(var(--border))]/60">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <Card className="overflow-hidden">
+      <CardHeader className="border-b border-[hsl(var(--border))]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle>Weekly Pivot Preview</CardTitle>
+            <CardTitle>Schedule preview</CardTitle>
             <CardDescription>
               Week of {schedule.context.week_start} · {schedule.report.status}
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="muted">AM blue</Badge>
-            <Badge variant="warning">Learning yellow</Badge>
-            <Badge variant="default">PM orange</Badge>
-            <Badge variant="success">Cross-shift green</Badge>
+            <Badge variant="muted">AM</Badge>
+            <Badge variant="default">PM</Badge>
+            <Badge variant="warning">Learning</Badge>
+            <Badge variant="success">Training / mixed</Badge>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
-        <div className="scrollbar-thin overflow-x-auto rounded-[1.5rem] border border-[hsl(var(--border))]/70">
-          <table className="min-w-full border-collapse text-sm">
+      <CardContent className="pt-5">
+        <div className="scrollbar-thin overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
+          <table className="min-w-[980px] border-collapse text-sm">
             <thead>
-              <tr className="bg-[hsl(var(--muted))]">
-                <th className="sticky left-0 z-10 border-b border-r border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-4 py-3 text-left font-[family-name:var(--font-heading)]">
+              <tr className="bg-[hsl(var(--secondary))]">
+                <th className="sticky left-0 z-20 border-b border-r border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-4 py-3 text-left font-semibold">
                   Employee
                 </th>
                 {schedule.pivot_preview.days.map((day) => (
-                  <th key={day} className="min-w-[150px] border-b border-[hsl(var(--border))] px-3 py-3 text-center font-[family-name:var(--font-heading)]">
+                  <th key={day} className="min-w-[132px] border-b border-[hsl(var(--border))] px-3 py-3 text-center font-semibold">
                     {day.slice(0, 3)}
                   </th>
                 ))}
               </tr>
               <tr>
-                <td className="sticky left-0 z-10 border-b border-r border-[hsl(var(--border))] bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-[hsl(var(--muted-foreground))]">
+                <td className="sticky left-0 z-20 border-b border-r border-[hsl(var(--border))] bg-white px-4 py-2 text-[11px] font-medium uppercase tracking-[0.12em] text-[hsl(var(--muted-foreground))]">
                   Service
                 </td>
                 {schedule.pivot_preview.days.map((day) => {
-                  const service =
-                    day === "Monday" || day === "Sunday"
-                      ? "closed"
-                      : weekConfig?.service_levels?.[day] ?? "closed";
+                  const service = day === "Monday" || day === "Sunday" ? "closed" : weekConfig?.service_levels?.[day] ?? "closed";
                   return (
-                    <td key={day} className="border-b border-[hsl(var(--border))] px-3 py-2 text-center text-xs uppercase tracking-[0.2em] text-[hsl(var(--muted-foreground))]">
+                    <td
+                      key={day}
+                      className="border-b border-[hsl(var(--border))] px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.12em] text-[hsl(var(--muted-foreground))]"
+                    >
                       {service}
                     </td>
                   );
@@ -94,14 +94,14 @@ export function SchedulePreview({ schedule, weekConfig }: { schedule: ScheduleRu
             <tbody>
               {Object.entries(groups).map(([role, rows]) => (
                 <Fragment key={role}>
-                  <tr className="bg-[hsl(var(--foreground))] text-white">
-                    <td colSpan={schedule.pivot_preview.days.length + 1} className="px-4 py-2 font-[family-name:var(--font-heading)] text-xs uppercase tracking-[0.3em]">
+                  <tr className="bg-slate-900 text-white">
+                    <td colSpan={schedule.pivot_preview.days.length + 1} className="px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]">
                       {roleLabels[role] ?? role}
                     </td>
                   </tr>
                   {rows.map((row) => (
                     <tr key={row.employee} className="align-top">
-                      <td className="sticky left-0 border-r border-t border-[hsl(var(--border))] bg-white px-4 py-3 font-semibold">
+                      <td className="sticky left-0 border-r border-t border-[hsl(var(--border))] bg-white px-4 py-3 font-medium">
                         {row.employee}
                       </td>
                       {schedule.pivot_preview.days.map((day) => {

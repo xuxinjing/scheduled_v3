@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Square, Waves } from "lucide-react";
+import { Mic, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,10 @@ type VoiceInputProps = {
 export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [bars, setBars] = useState<number[]>([0.25, 0.4, 0.55, 0.35, 0.6, 0.45]);
+  const [bars, setBars] = useState<number[]>([0.18, 0.24, 0.28, 0.22, 0.2, 0.16]);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
   const rafRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -58,7 +57,6 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
     const source = audioContext.createMediaStreamSource(stream);
     source.connect(analyser);
     analyser.fftSize = 64;
-    analyserRef.current = analyser;
     audioContextRef.current = audioContext;
 
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -67,7 +65,7 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
       const next = Array.from({ length: 6 }, (_, index) => {
         const slice = dataArray.slice(index * 5, index * 5 + 5);
         const avg = slice.reduce((sum, value) => sum + value, 0) / Math.max(slice.length, 1);
-        return Math.max(0.18, avg / 255);
+        return Math.max(0.16, avg / 255);
       });
       setBars(next);
       rafRef.current = requestAnimationFrame(tick);
@@ -79,11 +77,12 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
         chunksRef.current.push(event.data);
       }
     };
+
     recorder.onstop = async () => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
       }
-      setBars([0.2, 0.32, 0.48, 0.34, 0.42, 0.26]);
+      setBars([0.18, 0.24, 0.28, 0.22, 0.2, 0.16]);
       stream.getTracks().forEach((track) => track.stop());
       await audioContext.close().catch(() => undefined);
       const audioBlob = new Blob(chunksRef.current, { type: mimeType });
@@ -116,39 +115,42 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
   }
 
   return (
-    <div className="rounded-[1.75rem] border border-[hsl(var(--border))] bg-white/80 p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-[hsl(var(--muted-foreground))]">Voice capture</p>
-          <p className="text-sm text-[hsl(var(--foreground))]">
-            {isRecording ? "Recording chef notes..." : isTranscribing ? "Transcribing..." : "Tap to speak naturally"}
-          </p>
-        </div>
+    <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary))]/45 p-4">
+      <div className="flex items-center gap-4">
         <Button
           type="button"
           size="icon"
           disabled={disabled || isTranscribing}
           onClick={isRecording ? stopRecording : startRecording}
           className={cn(
-            "h-14 w-14 shadow-glow",
-            isRecording && "bg-[hsl(var(--danger))] hover:bg-[hsl(var(--danger))]",
+            "h-14 w-14 rounded-2xl shadow-none",
+            isRecording && "border-[hsl(var(--danger))] bg-[hsl(var(--danger))] hover:bg-[hsl(var(--danger))]",
           )}
         >
           {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         </Button>
-      </div>
-      <div className="flex items-end gap-2 rounded-full bg-[hsl(var(--muted))] px-3 py-3">
-        <Waves className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-        {bars.map((bar, index) => (
-          <span
-            key={index}
-            className={cn("w-2 rounded-full bg-[hsl(var(--primary))] transition-all", isRecording && "animate-wave")}
-            style={{
-              height: `${20 + bar * 28}px`,
-              animationDelay: `${index * 0.08}s`,
-            }}
-          />
-        ))}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-[hsl(var(--foreground))]">
+            {isRecording ? "Listening now" : isTranscribing ? "Transcribing audio" : "Tap and speak the week naturally"}
+          </p>
+          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+            {isRecording
+              ? "Tap again to stop."
+              : "Example: CDC is back, Chef is off Tuesday, Thursday through Saturday are peak."}
+          </p>
+          <div className="mt-3 flex items-end gap-1.5">
+            {bars.map((bar, index) => (
+              <span
+                key={index}
+                className={cn(
+                  "w-1.5 rounded-full bg-[hsl(var(--primary))] transition-all duration-150",
+                  isRecording ? "opacity-100" : "opacity-55",
+                )}
+                style={{ height: `${12 + bar * 26}px` }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

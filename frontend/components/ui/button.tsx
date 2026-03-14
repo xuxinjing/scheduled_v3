@@ -8,16 +8,20 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  default: "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--foreground))]",
-  secondary: "bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] hover:bg-white",
-  ghost: "bg-transparent text-[hsl(var(--foreground))] hover:bg-white/70",
-  danger: "bg-[hsl(var(--danger))] text-white hover:bg-[hsl(var(--foreground))]",
+  default:
+    "border border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[#1d4ed8] hover:border-[#1d4ed8]",
+  secondary:
+    "border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--secondary))]",
+  ghost:
+    "border border-transparent bg-transparent text-[hsl(var(--foreground))] hover:bg-[hsl(var(--secondary))]",
+  danger:
+    "border border-[hsl(var(--danger))] bg-[hsl(var(--danger))] text-white hover:bg-[#dc2626] hover:border-[#dc2626]",
 };
 
 const sizeClasses: Record<NonNullable<ButtonProps["size"]>, string> = {
-  default: "h-11 px-5 py-2.5",
-  sm: "h-9 px-4 text-sm",
-  lg: "h-12 px-6 text-base",
+  default: "h-11 px-4 py-2 text-sm",
+  sm: "h-9 px-3.5 text-sm",
+  lg: "h-12 px-5 text-sm sm:text-base",
   icon: "h-11 w-11 p-0",
 };
 
@@ -27,7 +31,7 @@ export function buttonVariants({
   className,
 }: Pick<ButtonProps, "variant" | "size" | "className"> = {}) {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-full font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+    "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
     variantClasses[variant],
     sizeClasses[size],
     className,
