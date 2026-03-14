@@ -5,6 +5,7 @@ import {
   Bell,
   CheckCircle2,
   ChevronDown,
+  ContactRound,
   LoaderCircle,
   Menu,
   Mic,
@@ -279,55 +280,103 @@ export function ChatUI() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f5]">
-      <div className="flex items-center justify-between gap-3 px-6 pb-5 pt-7">
-        <button className="flex h-11 w-11 items-center justify-center text-slate-700">
-          <Menu className="h-8 w-8" strokeWidth={1.75} />
-        </button>
-        <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-[0_2px_10px_rgba(15,23,42,0.08)]">
-          <span className="truncate text-lg font-medium text-slate-700">Acquerello Kitchen</span>
-          <ChevronDown className="h-5 w-5 text-slate-700" />
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="flex h-10 w-10 items-center justify-center text-slate-600">
-            <Bell className="h-7 w-7" strokeWidth={1.75} />
+      {view === "landing" ? (
+        <>
+          <div className="bg-[#353535] px-7 pb-7 pt-10 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-[1.05rem] font-semibold tracking-[0.02em]">22:11</span>
+                <ContactRound className="h-5 w-5" strokeWidth={2} />
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-end gap-1">
+                  <span className="h-2.5 w-1 rounded-full bg-white/65" />
+                  <span className="h-4 w-1 rounded-full bg-white/75" />
+                  <span className="h-5.5 w-1 rounded-full bg-white/85" />
+                  <span className="h-7 w-1 rounded-full bg-white" />
+                </div>
+                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-white" strokeWidth="2">
+                  <path d="M2 9.5C5.5 6 8.5 4.5 12 4.5s6.5 1.5 10 5" />
+                  <path d="M5 12.5c2.5-2.5 4.7-3.5 7-3.5s4.5 1 7 3.5" />
+                  <path d="M8.5 16c1.3-1.2 2.4-1.6 3.5-1.6s2.2.4 3.5 1.6" />
+                  <circle cx="12" cy="19" r="1.3" fill="white" stroke="none" />
+                </svg>
+                <div className="rounded-xl bg-white px-2.5 py-0.5 text-sm font-semibold text-[#353535]">100</div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 px-6 pb-5 pt-7">
+            <button className="flex h-12 w-12 items-center justify-center text-[#27355f]">
+              <Menu className="h-8 w-8" strokeWidth={1.75} />
+            </button>
+            <div className="flex min-w-0 items-center gap-3 rounded-[1.2rem] border border-slate-200 bg-white px-6 py-4 shadow-[0_2px_10px_rgba(15,23,42,0.08)]">
+              <span className="truncate text-[1.05rem] font-medium text-slate-700">Acquerello Scheduled</span>
+              <ChevronDown className="h-5 w-5 text-slate-700" />
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="flex h-10 w-10 items-center justify-center text-slate-600">
+                <Bell className="h-7 w-7" strokeWidth={1.75} />
+              </button>
+              <div className="relative">
+                <button className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-300">
+                  <UserCircle2 className="h-10 w-10" strokeWidth={1.5} />
+                </button>
+                <span className="absolute -bottom-1.5 right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[#f7f7f5]" />
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center justify-between gap-3 px-6 pb-5 pt-7">
+          <button className="flex h-11 w-11 items-center justify-center text-slate-700">
+            <Menu className="h-8 w-8" strokeWidth={1.75} />
           </button>
-          <button className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-            <UserCircle2 className="h-10 w-10" strokeWidth={1.5} />
-          </button>
+          <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-[0_2px_10px_rgba(15,23,42,0.08)]">
+            <span className="truncate text-lg font-medium text-slate-700">Acquerello Kitchen</span>
+            <ChevronDown className="h-5 w-5 text-slate-700" />
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="flex h-10 w-10 items-center justify-center text-slate-600">
+              <Bell className="h-7 w-7" strokeWidth={1.75} />
+            </button>
+            <button className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+              <UserCircle2 className="h-10 w-10" strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {view === "landing" ? (
-        <div className="px-6 pb-10 pt-8">
-          <div className="mx-auto flex min-h-[calc(100vh-140px)] flex-col justify-center">
+        <div className="px-6 pb-14 pt-8">
+          <div className="mx-auto flex min-h-[calc(100vh-260px)] flex-col">
             <div className="text-center">
-              <p className="text-3xl font-semibold text-[hsl(var(--primary))]">Acquerello Scheduled</p>
-              <h1 className="mx-auto mt-6 max-w-[14ch] text-[52px] font-semibold leading-[1.02] tracking-[-0.04em] text-slate-900">
+              <p className="text-[3rem] font-semibold tracking-[-0.03em] text-[hsl(var(--primary))]">Acquerello Scheduled</p>
+              <h1 className="mx-auto mt-6 max-w-[15ch] text-[2.6rem] font-semibold leading-[1.05] tracking-[-0.045em] text-slate-900">
                 Ready to generate kitchen schedule?
               </h1>
             </div>
 
-            <div className="mt-10 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
+            <div className="mt-12 rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
               <Textarea
                 ref={landingInputRef}
                 value={landingInput}
                 onChange={(event) => setLandingInput(event.target.value)}
                 placeholder="tell me what is different this week"
-                className="min-h-[220px] resize-none border-0 bg-transparent px-0 py-0 text-2xl text-slate-900 shadow-none focus:border-0 focus:ring-0 placeholder:text-slate-300"
+                className="min-h-[250px] resize-none border-0 bg-transparent px-0 py-0 text-[2rem] leading-[1.3] text-slate-900 shadow-none focus:border-0 focus:ring-0 placeholder:text-slate-300"
               />
-              <div className="mt-6 flex items-center justify-end gap-3">
+              <div className="mt-7 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={startVoiceFlow}
-                  className="flex h-20 w-20 items-center justify-center rounded-full bg-[#dfe4ec] text-slate-800 shadow-[0_3px_10px_rgba(15,23,42,0.12)]"
+                  className="flex h-[5.4rem] w-[5.4rem] items-center justify-center rounded-full bg-[#dfe4ec] text-slate-800 shadow-[0_3px_10px_rgba(15,23,42,0.12)]"
                 >
-                  <Mic className="h-9 w-9" strokeWidth={1.75} />
+                  <Mic className="h-10 w-10" strokeWidth={1.75} />
                 </button>
                 <button
                   type="button"
                   disabled={!landingInput.trim()}
                   onClick={() => void startFromLanding()}
-                  className="flex h-20 min-w-[156px] items-center justify-center rounded-full bg-slate-500 px-8 text-[2rem] font-medium text-white shadow-[0_4px_16px_rgba(15,23,42,0.22)] transition disabled:opacity-40"
+                  className="flex h-[5.4rem] min-w-[11.4rem] items-center justify-center rounded-full bg-slate-500 px-10 text-[2.15rem] font-medium text-white shadow-[0_4px_16px_rgba(15,23,42,0.22)] transition disabled:opacity-40"
                 >
                   Send
                 </button>
