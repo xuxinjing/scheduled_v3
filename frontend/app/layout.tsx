@@ -58,8 +58,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </aside>
 
             <main className="relative h-full flex-1 overflow-hidden bg-[#f9f3f7]">
-              <div className="absolute -right-[18%] -top-[14%] h-[62%] w-[62%] rounded-full bg-[#f0b7b6] blur-[240px]" />
-
               <div className="absolute left-0 top-0 z-50 w-full bg-white">
                 <div className="flex h-14 w-full items-center justify-between px-4 md:px-5" />
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, LoaderCircle, Menu, Mic, Send, UserCircle2 } from "lucide-react";
+import { Bell, LoaderCircle, Menu, Mic, Send } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ReasoningStream } from "@/components/reasoning-stream";
@@ -38,27 +38,16 @@ function buildConversationSummary(messages: ChatMessage[]) {
 
 function TopControls() {
   return (
-    <div className="flex items-center justify-between gap-3 px-6 pt-8 md:px-0 md:pt-6">
+    <div className="flex items-center justify-between gap-3 pl-8 pr-6 pt-8 md:px-0 md:pt-6">
       <button
         type="button"
-        className="flex h-11 w-11 items-center justify-center rounded-xl text-[#23345d] transition hover:bg-white/80 md:hidden"
+        className="flex h-11 w-11 items-center justify-center bg-transparent text-[#23345d] transition md:hidden"
         aria-label="Open navigation"
       >
         <Menu className="h-7 w-7" strokeWidth={1.8} />
       </button>
 
-      <div className="hidden flex-1 md:block" />
-
-      <div className="flex min-w-0 flex-1 items-center justify-center md:flex-none">
-        <div className="flex h-[58px] min-w-0 max-w-[460px] items-center gap-3 rounded-[20px] border border-[var(--tenant-border-color)] bg-white px-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-          <span className="truncate text-[15px] font-semibold text-[#334155] sm:text-[17px]">
-            Acquerello Kitchen Ops
-          </span>
-          <svg width="18" height="11" viewBox="0 0 18 11" fill="none" className="shrink-0">
-            <path d="M1 1.5L9 9.5L17 1.5" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-      </div>
+      <div className="flex-1" />
 
       <div className="flex items-center gap-3">
         <button
@@ -68,10 +57,6 @@ function TopControls() {
         >
           <Bell className="h-6 w-6" strokeWidth={1.8} />
         </button>
-        <div className="relative flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#ded9d2] text-[#9a9387]">
-          <UserCircle2 className="h-11 w-11" strokeWidth={1.4} />
-          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
-        </div>
       </div>
     </div>
   );
@@ -96,8 +81,8 @@ function LandingView({
 
       <div className="mx-auto mt-[11vh] flex w-full max-w-[940px] flex-col items-center px-6 md:mt-[14vh]">
         <div className="text-center">
-          <p className="text-[18px] font-semibold text-[#2563eb] md:text-[22px]">Acquerello Scheduled</p>
-          <h1 className="mt-4 text-[42px] font-semibold leading-[1.06] tracking-[-0.04em] text-[#101828] md:text-[72px]">
+          <p className="brand-serif text-[22px] text-[#2563eb] md:text-[34px]">Acquerello Scheduled</p>
+          <h1 className="nav-caps mt-4 text-[11px] leading-[1.3] text-[#101828] md:text-[17px]">
             Ready to generate kitchen schedule?
           </h1>
         </div>
@@ -107,10 +92,10 @@ function LandingView({
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
             placeholder="tell me what is different this week"
-            className="min-h-[188px] resize-none border-0 bg-transparent px-1 py-1 text-[18px] text-[#111827] shadow-none ring-0 placeholder:text-[#c7cdd7] focus:border-0 focus:ring-0 md:min-h-[220px] md:text-[22px]"
+            className="min-h-[188px] resize-none border-0 bg-transparent px-5 py-4 text-[18px] text-[#111827] shadow-none ring-0 placeholder:text-[#c7cdd7] focus:border-0 focus:ring-0 md:min-h-[220px] md:px-7 md:py-5 md:text-[22px]"
           />
 
-          <div className="mt-6 flex items-center justify-end gap-4">
+          <div className="mt-10 flex items-center justify-end gap-6 pr-3 pb-2 md:mt-12 md:gap-7 md:pr-4 md:pb-3">
             <Button
               type="button"
               size="icon"
