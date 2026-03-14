@@ -79,9 +79,9 @@ function LandingView({
     <div className="flex min-h-full flex-col justify-center pb-[30px]">
       <TopControls />
 
-      <div className="mx-auto mt-[11vh] flex w-full max-w-[940px] flex-col items-center px-6 md:mt-[14vh]">
+      <div className="mx-auto mt-[11vh] flex w-full max-w-[940px] flex-col items-center px-8 md:mt-[14vh] md:px-6">
         <div className="text-center">
-          <p className="brand-serif text-[22px] text-[#2563eb] md:text-[34px]">Acquerello Scheduled</p>
+          <p className="brand-serif text-[44px] text-[#2563eb] md:text-[68px]">Acquerello Scheduled</p>
           <h1 className="nav-caps mt-4 text-[11px] leading-[1.3] text-[#101828] md:text-[17px]">
             Ready to generate kitchen schedule?
           </h1>
@@ -95,7 +95,7 @@ function LandingView({
             className="min-h-[188px] resize-none border-0 bg-transparent px-5 py-4 text-[18px] text-[#111827] shadow-none ring-0 placeholder:text-[#c7cdd7] focus:border-0 focus:ring-0 md:min-h-[220px] md:px-7 md:py-5 md:text-[22px]"
           />
 
-          <div className="mt-10 flex items-center justify-end gap-6 pr-3 pb-2 md:mt-12 md:gap-7 md:pr-4 md:pb-3">
+          <div className="mt-10 flex items-center justify-end gap-6 pr-6 pb-5 md:mt-12 md:gap-7 md:pr-4 md:pb-3">
             <Button
               type="button"
               size="icon"
