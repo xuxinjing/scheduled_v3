@@ -11,9 +11,30 @@ type VoiceInputProps = {
   disabled?: boolean;
   onTranscript: (text: string) => Promise<void> | void;
   onRecordingStateChange?: (state: { isRecording: boolean; isTranscribing: boolean }) => void;
+  onTranscriptPreview?: (text: string) => void;
+  onError?: (message: string) => void;
+  autoStart?: boolean;
 };
 
-export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: VoiceInputProps) {
+type BrowserSpeechRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+};
+
+export function VoiceInput({
+  disabled,
+  onTranscript,
+  onRecordingStateChange,
+  onTranscriptPreview,
+  onError,
+  autoStart = false,
+}: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [bars, setBars] = useState<number[]>([0.18, 0.24, 0.28, 0.22, 0.2, 0.16]);
@@ -22,10 +43,26 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
   const audioContextRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const autoStartLockRef = useRef(false);
 
   useEffect(() => {
     onRecordingStateChange?.({ isRecording, isTranscribing });
   }, [isRecording, isTranscribing, onRecordingStateChange]);
+
+  useEffect(() => {
+    if (!autoStart) {
+      autoStartLockRef.current = false;
+      return;
+    }
+    if (autoStartLockRef.current || isRecording || isTranscribing || disabled) {
+      return;
+    }
+    autoStartLockRef.current = true;
+    void startRecording().catch((error) => {
+      onError?.(error instanceof Error ? error.message : "Unable to start microphone");
+    });
+  }, [autoStart, disabled, isRecording, isTranscribing, onError]);
 
   useEffect(() => {
     return () => {
@@ -34,6 +71,7 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
       }
       streamRef.current?.getTracks().forEach((track) => track.stop());
       audioContextRef.current?.close().catch(() => undefined);
+      recognitionRef.current?.stop();
     };
   }, []);
 
@@ -51,6 +89,7 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
     streamRef.current = stream;
     recorderRef.current = recorder;
     chunksRef.current = [];
+    onTranscriptPreview?.("");
 
     const audioContext = new AudioContext();
     const analyser = audioContext.createAnalyser();
@@ -72,6 +111,37 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
     };
     rafRef.current = requestAnimationFrame(tick);
 
+    const SpeechRecognitionCtor =
+      typeof window !== "undefined"
+        ? ((window as Window & { SpeechRecognition?: new () => BrowserSpeechRecognition; webkitSpeechRecognition?: new () => BrowserSpeechRecognition })
+            .SpeechRecognition ??
+            (window as Window & { webkitSpeechRecognition?: new () => BrowserSpeechRecognition }).webkitSpeechRecognition)
+        : undefined;
+
+    if (SpeechRecognitionCtor) {
+      const recognition = new SpeechRecognitionCtor();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+      recognition.onresult = (event) => {
+        const text = Array.from(event.results)
+          .map((result) => result[0]?.transcript ?? "")
+          .join(" ")
+          .trim();
+        onTranscriptPreview?.(text);
+      };
+      recognition.onerror = (event) => {
+        if (event.error !== "no-speech" && event.error !== "aborted") {
+          onError?.(`Speech recognition error: ${event.error}`);
+        }
+      };
+      recognition.onend = () => {
+        recognitionRef.current = null;
+      };
+      recognitionRef.current = recognition;
+      recognition.start();
+    }
+
     recorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         chunksRef.current.push(event.data);
@@ -82,6 +152,7 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
       }
+      recognitionRef.current?.stop();
       setBars([0.18, 0.24, 0.28, 0.22, 0.2, 0.16]);
       stream.getTracks().forEach((track) => track.stop());
       await audioContext.close().catch(() => undefined);
@@ -99,7 +170,12 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
         if (!response.ok || !payload.text) {
           throw new Error(payload.error || "Transcription failed");
         }
+        onTranscriptPreview?.(payload.text);
         await onTranscript(payload.text);
+        onTranscriptPreview?.("");
+      } catch (error) {
+        onError?.(error instanceof Error ? error.message : "Transcription failed");
+        throw error;
       } finally {
         setIsTranscribing(false);
       }
@@ -110,6 +186,7 @@ export function VoiceInput({ disabled, onTranscript, onRecordingStateChange }: V
   }
 
   function stopRecording() {
+    recognitionRef.current?.stop();
     recorderRef.current?.stop();
     setIsRecording(false);
   }

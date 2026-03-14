@@ -100,6 +100,10 @@ export function ChatUI() {
   const [recipientEmail, setRecipientEmail] = useState("chef@example.com");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
+  const [voiceAutoStart, setVoiceAutoStart] = useState(false);
+  const [voiceRecording, setVoiceRecording] = useState(false);
+  const [voiceTranscribing, setVoiceTranscribing] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState("");
 
   const landingInputRef = useRef<HTMLTextAreaElement | null>(null);
   const deferredMessages = useDeferredValue(messages);
@@ -124,6 +128,7 @@ export function ChatUI() {
     }
 
     setError("");
+    setLiveTranscript("");
     setState("processing");
     const nextMessages = [...messages, makeMessage("user", text)];
     setMessages(nextMessages);
@@ -264,6 +269,14 @@ export function ChatUI() {
     setLandingInput("");
   }
 
+  function startVoiceFlow() {
+    setError("");
+    setView("chat");
+    setVoiceAutoStart(true);
+    setLiveTranscript("");
+    setState("listening");
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f7f5]">
       <div className="flex items-center justify-between gap-3 px-6 pb-5 pt-7">
@@ -305,7 +318,7 @@ export function ChatUI() {
               <div className="mt-6 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => landingInputRef.current?.focus()}
+                  onClick={startVoiceFlow}
                   className="flex h-20 w-20 items-center justify-center rounded-full bg-[#dfe4ec] text-slate-800 shadow-[0_3px_10px_rgba(15,23,42,0.12)]"
                 >
                   <Mic className="h-9 w-9" strokeWidth={1.75} />
@@ -356,6 +369,14 @@ export function ChatUI() {
                   </div>
                 </div>
               ))}
+
+              {(voiceRecording || voiceTranscribing || liveTranscript) ? (
+                <div className="ml-auto max-w-[92%]">
+                  <div className="rounded-[1.4rem] rounded-tr-md bg-[hsl(var(--primary))] px-4 py-3 text-base leading-7 text-white">
+                    {liveTranscript || (voiceTranscribing ? "Transcribing audio..." : "Listening...")}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="border-t border-slate-200 px-4 py-4">
@@ -375,6 +396,7 @@ export function ChatUI() {
                 />
                 <button
                   type="button"
+                  onClick={startVoiceFlow}
                   className="flex h-14 w-14 items-center justify-center rounded-full bg-[#dfe4ec] text-slate-800"
                 >
                   <Mic className="h-6 w-6" strokeWidth={1.75} />
@@ -411,21 +433,33 @@ export function ChatUI() {
               </div>
             ) : null}
 
-            <VoiceInput
-              disabled={state === "processing" || state === "generating"}
-              onRecordingStateChange={({ isRecording, isTranscribing }) => {
-                if (isRecording) {
-                  setState("listening");
-                } else if (isTranscribing) {
-                  setState("processing");
-                } else {
-                  setState((current) => (current === "listening" ? "idle" : current));
-                }
-              }}
-              onTranscript={async (text) => {
-                await sendMessage(text);
-              }}
-            />
+            {(voiceRecording || voiceTranscribing || voiceAutoStart) ? (
+              <VoiceInput
+                autoStart={voiceAutoStart}
+                disabled={state === "processing" || state === "generating"}
+                onTranscriptPreview={(text) => setLiveTranscript(text)}
+                onError={(message) => {
+                  setError(message);
+                  setVoiceAutoStart(false);
+                }}
+                onRecordingStateChange={({ isRecording, isTranscribing }) => {
+                  setVoiceRecording(isRecording);
+                  setVoiceTranscribing(isTranscribing);
+                  if (isRecording) {
+                    setState("listening");
+                    setVoiceAutoStart(false);
+                  } else if (isTranscribing) {
+                    setState("processing");
+                  } else {
+                    setState((current) => (current === "listening" ? "idle" : current));
+                  }
+                }}
+                onTranscript={async (text) => {
+                  setVoiceAutoStart(false);
+                  await sendMessage(text);
+                }}
+              />
+            ) : null}
 
             {reasoningEvents.length > 0 || state === "generating" ? (
               <ReasoningStream events={reasoningEvents} running={state === "generating"} />
