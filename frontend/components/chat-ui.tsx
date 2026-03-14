@@ -1,18 +1,29 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, LoaderCircle, Send, Sparkles } from "lucide-react";
-import { startTransition, useDeferredValue, useEffect, useState } from "react";
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  ChevronDown,
+  LoaderCircle,
+  Menu,
+  Mic,
+  Send,
+  UserCircle2,
+} from "lucide-react";
+import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
 
 import { ReasoningStream } from "@/components/reasoning-stream";
 import { SchedulePreview } from "@/components/schedule-preview";
 import { VoiceInput } from "@/components/voice-input";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { ChatMessage, ChatResponse, ReasoningEvent, ScheduleRun, WeekConfig } from "@/lib/types";
 
 type WorkflowState = "idle" | "listening" | "processing" | "confirming" | "revising" | "generating" | "done";
+type ViewState = "landing" | "chat";
 
 function makeMessage(role: ChatMessage["role"], content: string): ChatMessage {
   return {
@@ -72,13 +83,15 @@ function stateLabel(state: WorkflowState) {
 }
 
 export function ChatUI() {
+  const [view, setView] = useState<ViewState>("landing");
   const [messages, setMessages] = useState<ChatMessage[]>([
     makeMessage(
       "assistant",
-      "Tell me the week naturally. Mention service levels, days off, training, and any operational notes that matter.",
+      "Tell me what is different this week. I’ll translate it into the machine schedule config and confirm it back to you.",
     ),
   ]);
-  const [input, setInput] = useState("");
+  const [landingInput, setLandingInput] = useState("");
+  const [chatInput, setChatInput] = useState("");
   const [state, setState] = useState<WorkflowState>("idle");
   const [draftWeekConfig, setDraftWeekConfig] = useState<WeekConfig | null>(null);
   const [reasoningEvents, setReasoningEvents] = useState<ReasoningEvent[]>([]);
@@ -88,6 +101,7 @@ export function ChatUI() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
 
+  const landingInputRef = useRef<HTMLTextAreaElement | null>(null);
   const deferredMessages = useDeferredValue(messages);
   const stateMeta = stateLabel(state);
 
@@ -113,7 +127,7 @@ export function ChatUI() {
     setState("processing");
     const nextMessages = [...messages, makeMessage("user", text)];
     setMessages(nextMessages);
-    setInput("");
+    setChatInput("");
 
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -240,63 +254,102 @@ export function ChatUI() {
     setSendingEmail(false);
   }
 
+  async function startFromLanding() {
+    const text = landingInput.trim();
+    if (!text) {
+      return;
+    }
+    setView("chat");
+    await sendMessage(text);
+    setLandingInput("");
+  }
+
   return (
-    <div className="space-y-4 pb-24">
-      <Card>
-        <CardHeader className="border-b border-[hsl(var(--border))]">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle>This week</CardTitle>
-                <CardDescription>
-                  Speak or type the chef notes, confirm the interpretation, then send the schedule.
-                </CardDescription>
-              </div>
-              <Badge variant={stateMeta.variant}>{stateMeta.text}</Badge>
+    <div className="min-h-screen bg-[#f7f7f5]">
+      <div className="flex items-center justify-between gap-3 px-6 pb-5 pt-7">
+        <button className="flex h-11 w-11 items-center justify-center text-slate-700">
+          <Menu className="h-8 w-8" strokeWidth={1.75} />
+        </button>
+        <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-[0_2px_10px_rgba(15,23,42,0.08)]">
+          <span className="truncate text-lg font-medium text-slate-700">Acquerello Kitchen</span>
+          <ChevronDown className="h-5 w-5 text-slate-700" />
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="flex h-10 w-10 items-center justify-center text-slate-600">
+            <Bell className="h-7 w-7" strokeWidth={1.75} />
+          </button>
+          <button className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+            <UserCircle2 className="h-10 w-10" strokeWidth={1.5} />
+          </button>
+        </div>
+      </div>
+
+      {view === "landing" ? (
+        <div className="px-6 pb-10 pt-8">
+          <div className="mx-auto flex min-h-[calc(100vh-140px)] flex-col justify-center">
+            <div className="text-center">
+              <p className="text-3xl font-semibold text-[hsl(var(--primary))]">Acquerello Scheduled</p>
+              <h1 className="mx-auto mt-6 max-w-[14ch] text-[52px] font-semibold leading-[1.02] tracking-[-0.04em] text-slate-900">
+                Ready to generate kitchen schedule?
+              </h1>
             </div>
-            <div className="flex flex-wrap gap-2 text-sm text-[hsl(var(--muted-foreground))]">
-              <span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-1">1. Capture notes</span>
-              <span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-1">2. Confirm summary</span>
-              <span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-1">3. Generate and send</span>
+
+            <div className="mt-10 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
+              <Textarea
+                ref={landingInputRef}
+                value={landingInput}
+                onChange={(event) => setLandingInput(event.target.value)}
+                placeholder="tell me what is different this week"
+                className="min-h-[220px] resize-none border-0 bg-transparent px-0 py-0 text-2xl text-slate-900 shadow-none focus:border-0 focus:ring-0 placeholder:text-slate-300"
+              />
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => landingInputRef.current?.focus()}
+                  className="flex h-20 w-20 items-center justify-center rounded-full bg-[#dfe4ec] text-slate-800 shadow-[0_3px_10px_rgba(15,23,42,0.12)]"
+                >
+                  <Mic className="h-9 w-9" strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  disabled={!landingInput.trim()}
+                  onClick={() => void startFromLanding()}
+                  className="flex h-20 min-w-[156px] items-center justify-center rounded-full bg-slate-500 px-8 text-[2rem] font-medium text-white shadow-[0_4px_16px_rgba(15,23,42,0.22)] transition disabled:opacity-40"
+                >
+                  Send
+                </button>
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-5">
-          {bootLoading && (
-            <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary))]/65 px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-              Loading restaurant defaults...
+        </div>
+      ) : (
+        <div className="px-4 pb-8">
+          <div className="rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.06)]">
+            <div className="border-b border-slate-200 px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Kitchen schedule chat</p>
+                  <p className="mt-1 text-sm text-slate-500">Tell the assistant what changed, confirm it, then generate.</p>
+                </div>
+                <Badge variant={stateMeta.variant}>{stateMeta.text}</Badge>
+              </div>
             </div>
-          )}
 
-          <VoiceInput
-            disabled={state === "processing" || state === "generating"}
-            onRecordingStateChange={({ isRecording, isTranscribing }) => {
-              if (isRecording) {
-                setState("listening");
-              } else if (isTranscribing) {
-                setState("processing");
-              } else {
-                setState((current) => (current === "listening" ? "idle" : current));
-              }
-            }}
-            onTranscript={async (text) => {
-              await sendMessage(text);
-            }}
-          />
+            <div className="max-h-[380px] space-y-3 overflow-y-auto px-4 py-4">
+              {bootLoading ? (
+                <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Loading restaurant defaults...
+                </div>
+              ) : null}
 
-          <div className="rounded-xl border border-[hsl(var(--border))] bg-white">
-            <div className="max-h-[340px] space-y-3 overflow-y-auto p-4">
               {deferredMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={message.role === "assistant" ? "max-w-[92%]" : "ml-auto max-w-[92%]"}
-                >
+                <div key={message.id} className={message.role === "assistant" ? "max-w-[92%]" : "ml-auto max-w-[92%]"}>
                   <div
                     className={
                       message.role === "assistant"
-                        ? "rounded-2xl rounded-tl-md bg-[hsl(var(--secondary))] px-4 py-3 text-sm leading-6 text-[hsl(var(--foreground))]"
-                        : "rounded-2xl rounded-tr-md bg-[hsl(var(--primary))] px-4 py-3 text-sm leading-6 text-white"
+                        ? "rounded-[1.4rem] rounded-tl-md bg-slate-100 px-4 py-3 text-base leading-7 text-slate-900"
+                        : "rounded-[1.4rem] rounded-tr-md bg-[hsl(var(--primary))] px-4 py-3 text-base leading-7 text-white"
                     }
                   >
                     {message.content}
@@ -304,107 +357,114 @@ export function ChatUI() {
                 </div>
               ))}
             </div>
-            <div className="border-t border-[hsl(var(--border))] p-4">
-              <div className="flex flex-col gap-3">
+
+            <div className="border-t border-slate-200 px-4 py-4">
+              <div className="flex items-center gap-3">
                 <Input
-                  value={input}
+                  value={chatInput}
                   disabled={state === "processing" || state === "generating"}
-                  onChange={(event) => setInput(event.target.value)}
+                  onChange={(event) => setChatInput(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
-                      void sendMessage(input);
+                      void sendMessage(chatInput);
                     }
                   }}
-                  placeholder="Type a note or correction"
+                  placeholder="tell me what is different this week"
+                  className="h-14 rounded-full px-5 text-base"
                 />
-                <Button
+                <button
                   type="button"
-                  disabled={!input.trim() || state === "processing" || state === "generating"}
-                  onClick={() => void sendMessage(input)}
-                  className="w-full sm:w-auto"
+                  className="flex h-14 w-14 items-center justify-center rounded-full bg-[#dfe4ec] text-slate-800"
                 >
-                  {state === "processing" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Send note
-                </Button>
+                  <Mic className="h-6 w-6" strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  disabled={!chatInput.trim() || state === "processing" || state === "generating"}
+                  onClick={() => void sendMessage(chatInput)}
+                  className="flex h-14 min-w-[110px] items-center justify-center rounded-full bg-slate-500 px-5 text-xl font-medium text-white disabled:opacity-40"
+                >
+                  Send
+                </button>
               </div>
             </div>
           </div>
 
-          {draftWeekConfig && (
-            <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary))]/55 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[hsl(var(--primary))]" />
-                <p className="text-sm font-medium text-[hsl(var(--foreground))]">Current machine draft</p>
-              </div>
-              <pre className="scrollbar-thin overflow-x-auto rounded-xl bg-white p-4 text-xs leading-6 text-[hsl(var(--foreground))]">
-                {JSON.stringify(draftWeekConfig, null, 2)}
-              </pre>
-            </div>
-          )}
-
-          {state === "confirming" && (
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button onClick={() => void runSchedule()} className="flex-1 sm:flex-none">
-                <CheckCircle2 className="h-4 w-4" />
-                Confirm and generate
-              </Button>
-              <Button variant="secondary" onClick={() => setState("revising")} className="flex-1 sm:flex-none">
-                Revise notes
-              </Button>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-start gap-3 rounded-xl border border-[hsl(var(--danger))]/20 bg-[hsl(var(--danger))]/8 px-4 py-3 text-sm text-[hsl(var(--foreground))]">
-              <AlertTriangle className="mt-0.5 h-4 w-4 text-[hsl(var(--danger))]" />
-              <span>{error}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <ReasoningStream events={reasoningEvents} running={state === "generating"} />
-
-      {schedule ? (
-        <>
-          <SchedulePreview schedule={schedule} weekConfig={draftWeekConfig} />
-          <Card className="fixed bottom-0 left-0 right-0 z-30 rounded-none border-x-0 border-b-0 sm:static sm:rounded-2xl sm:border">
-            <CardContent className="space-y-3 pt-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Input
-                  value={recipientEmail}
-                  onChange={(event) => setRecipientEmail(event.target.value)}
-                  type="email"
-                  placeholder="chef@restaurant.com"
-                />
-                <Button disabled={sendingEmail} onClick={() => void sendScheduleEmail()} className="sm:w-auto">
-                  {sendingEmail ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Send
+          <div className="mt-4 space-y-4">
+            {state === "confirming" ? (
+              <div className="flex flex-col gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_4px_16px_rgba(15,23,42,0.05)]">
+                <Button onClick={() => void runSchedule()} className="h-12 w-full rounded-full text-base">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Confirm and generate
+                </Button>
+                <Button variant="secondary" onClick={() => setState("revising")} className="h-12 w-full rounded-full text-base">
+                  Revise
                 </Button>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <a className={buttonVariants({ variant: "secondary", size: "sm" })} href={`/api/history/${schedule.schedule_id}/artifacts/schedule_output.xlsx`}>
-                  Download Excel
-                </a>
-                <a className={buttonVariants({ variant: "ghost", size: "sm" })} href={`/history/${schedule.schedule_id}`}>
-                  View history
-                </a>
-                <Badge variant="muted">{schedule.schedule_id.slice(0, 8)}</Badge>
-                {schedule.email_sent_at ? <Badge variant="success">Sent</Badge> : null}
+            ) : null}
+
+            {error ? (
+              <div className="flex items-start gap-3 rounded-[1.5rem] border border-[hsl(var(--danger))]/20 bg-[hsl(var(--danger))]/8 px-4 py-3 text-sm text-[hsl(var(--foreground))]">
+                <AlertTriangle className="mt-0.5 h-4 w-4 text-[hsl(var(--danger))]" />
+                <span>{error}</span>
               </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Preview</CardTitle>
-            <CardDescription>
-              The weekly pivot schedule will appear here once generation completes.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+            ) : null}
+
+            <VoiceInput
+              disabled={state === "processing" || state === "generating"}
+              onRecordingStateChange={({ isRecording, isTranscribing }) => {
+                if (isRecording) {
+                  setState("listening");
+                } else if (isTranscribing) {
+                  setState("processing");
+                } else {
+                  setState((current) => (current === "listening" ? "idle" : current));
+                }
+              }}
+              onTranscript={async (text) => {
+                await sendMessage(text);
+              }}
+            />
+
+            {reasoningEvents.length > 0 || state === "generating" ? (
+              <ReasoningStream events={reasoningEvents} running={state === "generating"} />
+            ) : null}
+
+            {schedule ? (
+              <>
+                <SchedulePreview schedule={schedule} weekConfig={draftWeekConfig} />
+                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_4px_16px_rgba(15,23,42,0.05)]">
+                  <div className="flex flex-col gap-3">
+                    <Input
+                      value={recipientEmail}
+                      onChange={(event) => setRecipientEmail(event.target.value)}
+                      type="email"
+                      placeholder="chef@restaurant.com"
+                      className="h-12 rounded-full px-5"
+                    />
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Button disabled={sendingEmail} onClick={() => void sendScheduleEmail()} className="h-12 flex-1 rounded-full text-base">
+                        {sendingEmail ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        Send to email
+                      </Button>
+                      <a
+                        className={buttonVariants({ variant: "secondary", className: "h-12 flex-1 rounded-full text-base" })}
+                        href={`/api/history/${schedule.schedule_id}/artifacts/schedule_output.xlsx`}
+                      >
+                        Download Excel
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="muted">{schedule.schedule_id.slice(0, 8)}</Badge>
+                      {schedule.email_sent_at ? <Badge variant="success">Sent</Badge> : null}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
       )}
     </div>
   );
