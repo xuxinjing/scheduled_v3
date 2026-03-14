@@ -192,7 +192,7 @@ export function VoiceInput({
   }
 
   return (
-    <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary))]/45 p-4">
+    <div className="flex-1 rounded-[22px] border border-[var(--tenant-border-color)] bg-white p-4 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
       <div className="flex items-center gap-4">
         <Button
           type="button"
@@ -200,17 +200,17 @@ export function VoiceInput({
           disabled={disabled || isTranscribing}
           onClick={isRecording ? stopRecording : startRecording}
           className={cn(
-            "h-14 w-14 rounded-2xl shadow-none",
+            "h-[60px] w-[60px] rounded-full border-[#dbe2ec] bg-[#dde3ee] text-[#0f172a] shadow-none hover:bg-[#d6dde8]",
             isRecording && "border-[hsl(var(--danger))] bg-[hsl(var(--danger))] hover:bg-[hsl(var(--danger))]",
           )}
         >
           {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         </Button>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-[hsl(var(--foreground))]">
-            {isRecording ? "Listening now" : isTranscribing ? "Transcribing audio" : "Tap and speak the week naturally"}
+          <p className="text-sm font-semibold text-[#111827]">
+            {isRecording ? "Listening now" : isTranscribing ? "Transcribing audio" : "Speak the weekly changes"}
           </p>
-          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+          <p className="mt-1 text-sm text-[#667085]">
             {isRecording
               ? "Tap again to stop."
               : "Example: CDC is back, Chef is off Tuesday, Thursday through Saturday are peak."}

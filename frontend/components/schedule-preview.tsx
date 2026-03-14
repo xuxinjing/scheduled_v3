@@ -43,11 +43,12 @@ export function SchedulePreview({ schedule, weekConfig }: { schedule: ScheduleRu
   }, {});
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="border-b border-[hsl(var(--border))]">
+    <Card className="overflow-hidden rounded-[24px]">
+      <CardHeader className="border-b border-[var(--tenant-border-color)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle>Schedule preview</CardTitle>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Preview</p>
+            <CardTitle className="mt-1 text-[24px] tracking-[-0.03em]">Schedule preview</CardTitle>
             <CardDescription>
               Week of {schedule.context.week_start} · {schedule.report.status}
             </CardDescription>
@@ -61,7 +62,7 @@ export function SchedulePreview({ schedule, weekConfig }: { schedule: ScheduleRu
         </div>
       </CardHeader>
       <CardContent className="pt-5">
-        <div className="scrollbar-thin overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
+        <div className="scrollbar-thin overflow-x-auto rounded-[20px] border border-[var(--tenant-border-color)]">
           <table className="min-w-[980px] border-collapse text-sm">
             <thead>
               <tr className="bg-[hsl(var(--secondary))]">

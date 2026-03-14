@@ -9,9 +9,9 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
   default:
-    "border border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[#1d4ed8] hover:border-[#1d4ed8]",
+    "border border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[#2f6df6] hover:border-[#2f6df6]",
   secondary:
-    "border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--secondary))]",
+    "border border-[var(--tenant-border-color)] bg-[hsl(var(--card))] text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--secondary))]",
   ghost:
     "border border-transparent bg-transparent text-[hsl(var(--foreground))] hover:bg-[hsl(var(--secondary))]",
   danger:
@@ -21,7 +21,7 @@ const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
 const sizeClasses: Record<NonNullable<ButtonProps["size"]>, string> = {
   default: "h-11 px-4 py-2 text-sm",
   sm: "h-9 px-3.5 text-sm",
-  lg: "h-12 px-5 text-sm sm:text-base",
+  lg: "h-12 px-6 text-sm sm:text-base",
   icon: "h-11 w-11 p-0",
 };
 

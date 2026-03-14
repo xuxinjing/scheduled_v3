@@ -114,14 +114,13 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
   const activeIndex = running ? events.length - 1 : -1;
 
   return (
-    <Card>
-      <CardHeader className="border-b border-[hsl(var(--border))]">
+    <Card className="rounded-[24px]">
+      <CardHeader className="border-b border-[var(--tenant-border-color)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Schedule generation</CardTitle>
-            <CardDescription>
-              Integrity check and solver progress stream here in real time.
-            </CardDescription>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Progress</p>
+            <CardTitle className="mt-1 text-[24px] tracking-[-0.03em]">Schedule generation</CardTitle>
+            <CardDescription>Integrity check and solver progress stream here in real time.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             {running ? (
@@ -142,7 +141,7 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
         <CardContent className="pt-5">
           <div
             ref={bodyRef}
-            className="scrollbar-thin max-h-[360px] space-y-3 overflow-y-auto rounded-xl bg-[hsl(var(--secondary))]/55 p-3"
+            className="scrollbar-thin max-h-[360px] space-y-3 overflow-y-auto rounded-[20px] bg-[#f8fafc] p-3"
           >
             {events.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-white px-4 py-5 text-sm text-[hsl(var(--muted-foreground))]">

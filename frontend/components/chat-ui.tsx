@@ -1,551 +1,552 @@
 "use client";
 
-import {
-  AlertTriangle,
-  Bell,
-  CheckCircle2,
-  ChevronDown,
-  ContactRound,
-  LoaderCircle,
-  Menu,
-  Mic,
-  Send,
-  UserCircle2,
-} from "lucide-react";
-import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
+import { Bell, LoaderCircle, Menu, Mic, Send, UserCircle2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ReasoningStream } from "@/components/reasoning-stream";
 import { SchedulePreview } from "@/components/schedule-preview";
 import { VoiceInput } from "@/components/voice-input";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { ChatMessage, ChatResponse, ReasoningEvent, ScheduleRun, WeekConfig } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-type WorkflowState = "idle" | "listening" | "processing" | "confirming" | "revising" | "generating" | "done";
-type ViewState = "landing" | "chat";
-
-function makeMessage(role: ChatMessage["role"], content: string): ChatMessage {
-  return {
-    id: `${role}-${crypto.randomUUID()}`,
-    role,
-    content,
-    createdAt: new Date().toISOString(),
+type RestaurantSnapshot = {
+  restaurant_config?: {
+    name?: string;
+    email_config?: {
+      default_recipient?: string;
+    };
   };
+  week_config?: WeekConfig;
+};
+
+type ViewMode = "landing" | "chat";
+
+function messageId(prefix: string) {
+  return `${prefix}-${crypto.randomUUID()}`;
 }
 
-function parseSseEvent(raw: string): ReasoningEvent | null {
-  const payloadLine = raw.split("\n").find((line) => line.startsWith("data:"));
-  if (!payloadLine) {
-    return null;
-  }
-  try {
-    return JSON.parse(payloadLine.slice(5).trim()) as ReasoningEvent;
-  } catch {
-    return null;
-  }
+function buildConversationSummary(messages: ChatMessage[]) {
+  return messages
+    .filter((message) => message.role !== "system")
+    .map((message) => `${message.role === "assistant" ? "Assistant" : "Chef"}: ${message.content}`)
+    .join("\n");
 }
 
-function buildWeekConstraintsMarkdown(weekConfig: WeekConfig) {
-  const sections = [
-    "# week_constraints.md",
-    "",
-    "## Week Of",
-    weekConfig.week_start,
-    "",
-    "## Service Levels",
-    ...Object.entries(weekConfig.service_levels).map(([day, level]) => `- ${day}: ${level}`),
-    "",
-    "## Unavailable",
-    ...(Object.entries(weekConfig.unavailable).length
-      ? Object.entries(weekConfig.unavailable).map(([name, days]) => `- ${name}: ${days.join(", ")}`)
-      : ["- None"]),
-    "",
-    "## Forced Days",
-    ...(Object.entries(weekConfig.forced_days).length
-      ? Object.entries(weekConfig.forced_days).map(([name, days]) => `- ${name}: ${days.join(", ")}`)
-      : ["- None"]),
-    "",
-    "## Notes",
-    ...(weekConfig.notes.length ? weekConfig.notes.map((note) => `- ${note}`) : ["- None"]),
-  ];
-  return sections.join("\n");
+function TopControls() {
+  return (
+    <div className="flex items-center justify-between gap-3 px-6 pt-8 md:px-0 md:pt-6">
+      <button
+        type="button"
+        className="flex h-11 w-11 items-center justify-center rounded-xl text-[#23345d] transition hover:bg-white/80 md:hidden"
+        aria-label="Open navigation"
+      >
+        <Menu className="h-7 w-7" strokeWidth={1.8} />
+      </button>
+
+      <div className="hidden flex-1 md:block" />
+
+      <div className="flex min-w-0 flex-1 items-center justify-center md:flex-none">
+        <div className="flex h-[58px] min-w-0 max-w-[460px] items-center gap-3 rounded-[20px] border border-[var(--tenant-border-color)] bg-white px-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          <span className="truncate text-[15px] font-semibold text-[#334155] sm:text-[17px]">
+            Acquerello Kitchen Ops
+          </span>
+          <svg width="18" height="11" viewBox="0 0 18 11" fill="none" className="shrink-0">
+            <path d="M1 1.5L9 9.5L17 1.5" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          className="hidden h-11 w-11 items-center justify-center rounded-full text-[#334155] transition hover:bg-white/80 md:inline-flex"
+          aria-label="Notifications"
+        >
+          <Bell className="h-6 w-6" strokeWidth={1.8} />
+        </button>
+        <div className="relative flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#ded9d2] text-[#9a9387]">
+          <UserCircle2 className="h-11 w-11" strokeWidth={1.4} />
+          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function stateLabel(state: WorkflowState) {
-  if (state === "listening") return { text: "Listening", variant: "default" as const };
-  if (state === "processing") return { text: "Interpreting", variant: "warning" as const };
-  if (state === "confirming") return { text: "Ready to confirm", variant: "success" as const };
-  if (state === "revising") return { text: "Revision mode", variant: "muted" as const };
-  if (state === "generating") return { text: "Generating", variant: "warning" as const };
-  if (state === "done") return { text: "Schedule ready", variant: "success" as const };
-  return { text: "Waiting", variant: "muted" as const };
+function LandingView({
+  draft,
+  onDraftChange,
+  onSend,
+  onStartVoice,
+  disabled,
+}: {
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  onStartVoice: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex min-h-full flex-col justify-center pb-[30px]">
+      <TopControls />
+
+      <div className="mx-auto mt-[11vh] flex w-full max-w-[940px] flex-col items-center px-6 md:mt-[14vh]">
+        <div className="text-center">
+          <p className="text-[18px] font-semibold text-[#2563eb] md:text-[22px]">Acquerello Scheduled</p>
+          <h1 className="mt-4 text-[42px] font-semibold leading-[1.06] tracking-[-0.04em] text-[#101828] md:text-[72px]">
+            Ready to generate kitchen schedule?
+          </h1>
+        </div>
+
+        <div className="content-panel mt-10 flex w-full max-w-[860px] flex-col rounded-[26px] p-6 md:mt-12 md:min-h-[350px] md:p-7">
+          <Textarea
+            value={draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+            placeholder="tell me what is different this week"
+            className="min-h-[188px] resize-none border-0 bg-transparent px-1 py-1 text-[18px] text-[#111827] shadow-none ring-0 placeholder:text-[#c7cdd7] focus:border-0 focus:ring-0 md:min-h-[220px] md:text-[22px]"
+          />
+
+          <div className="mt-6 flex items-center justify-end gap-4">
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              onClick={onStartVoice}
+              disabled={disabled}
+              className="h-[78px] w-[78px] rounded-full border-[#dbe2ec] bg-[#dde3ee] text-[#0f172a] shadow-[0_8px_18px_rgba(15,23,42,0.12)] hover:bg-[#d6dde8]"
+            >
+              <Mic className="h-8 w-8" strokeWidth={1.8} />
+            </Button>
+            <Button
+              type="button"
+              onClick={onSend}
+              disabled={disabled || !draft.trim()}
+              className="h-[78px] min-w-[172px] rounded-full border-[#6b7280] bg-[#6b7280] px-8 text-[18px] font-medium text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] hover:border-[#525964] hover:bg-[#525964]"
+            >
+              {disabled ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+              Send
+            </Button>
+          </div>
+        </div>
+
+        <p className="mt-10 max-w-[700px] text-center text-[15px] leading-8 text-[#667085]">
+          Speak naturally about time off, service level changes, station coverage, or training goals. The assistant
+          will translate it into a clean schedule draft before generation.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MessageBubble({ message }: { message: ChatMessage }) {
+  const isAssistant = message.role === "assistant";
+  return (
+    <div className={cn("flex", isAssistant ? "justify-start" : "justify-end")}>
+      <div
+        className={cn(
+          "max-w-[88%] rounded-[22px] px-4 py-3 text-[15px] leading-7 shadow-[0_6px_18px_rgba(15,23,42,0.05)] md:max-w-[78%]",
+          isAssistant ? "bg-white text-[#0f172a]" : "bg-[#2563eb] text-white",
+        )}
+      >
+        {message.content}
+      </div>
+    </div>
+  );
 }
 
 export function ChatUI() {
-  const [view, setView] = useState<ViewState>("landing");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    makeMessage(
-      "assistant",
-      "Tell me what is different this week. I’ll translate it into the machine schedule config and confirm it back to you.",
-    ),
-  ]);
-  const [landingInput, setLandingInput] = useState("");
-  const [chatInput, setChatInput] = useState("");
-  const [state, setState] = useState<WorkflowState>("idle");
-  const [draftWeekConfig, setDraftWeekConfig] = useState<WeekConfig | null>(null);
-  const [reasoningEvents, setReasoningEvents] = useState<ReasoningEvent[]>([]);
+  const [view, setView] = useState<ViewMode>("landing");
+  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [weekConfig, setWeekConfig] = useState<WeekConfig | null>(null);
   const [schedule, setSchedule] = useState<ScheduleRun | null>(null);
-  const [error, setError] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("chef@example.com");
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [bootLoading, setBootLoading] = useState(true);
+  const [reasoningEvents, setReasoningEvents] = useState<ReasoningEvent[]>([]);
+  const [confirmationReady, setConfirmationReady] = useState(false);
+  const [pendingReply, setPendingReply] = useState(false);
+  const [pendingSchedule, setPendingSchedule] = useState(false);
   const [voiceAutoStart, setVoiceAutoStart] = useState(false);
-  const [voiceRecording, setVoiceRecording] = useState(false);
-  const [voiceTranscribing, setVoiceTranscribing] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState("");
-
-  const landingInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const deferredMessages = useDeferredValue(messages);
-  const stateMeta = stateLabel(state);
+  const [transcriptPreview, setTranscriptPreview] = useState("");
+  const [error, setError] = useState("");
+  const [emailRecipient, setEmailRecipient] = useState("");
+  const [emailStatus, setEmailStatus] = useState("");
+  const [restaurantSnapshot, setRestaurantSnapshot] = useState<RestaurantSnapshot | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    void fetch("/api/restaurant")
+    void fetch("/api/restaurant", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { restaurant_config?: { email_config?: { default_recipient?: string } } }) => {
-        const email = data.restaurant_config?.email_config?.default_recipient;
-        if (email) {
-          setRecipientEmail(email);
-        }
+      .then((payload: RestaurantSnapshot) => {
+        setRestaurantSnapshot(payload);
+        setEmailRecipient(payload.restaurant_config?.email_config?.default_recipient ?? "");
       })
-      .finally(() => setBootLoading(false));
+      .catch(() => undefined);
   }, []);
 
-  async function sendMessage(content: string) {
-    const text = content.trim();
-    if (!text) {
+  useEffect(() => {
+    if (!messagesEndRef.current) {
       return;
     }
+    messagesEndRef.current.scrollIntoView({ block: "end", behavior: "smooth" });
+  }, [messages, transcriptPreview, pendingReply]);
 
+  const canGenerate = useMemo(() => Boolean(weekConfig) && !pendingReply && !pendingSchedule, [pendingReply, pendingSchedule, weekConfig]);
+
+  async function requestAssistantReply(nextMessages: ChatMessage[]) {
+    setPendingReply(true);
     setError("");
-    setLiveTranscript("");
-    setState("processing");
-    const nextMessages = [...messages, makeMessage("user", text)];
-    setMessages(nextMessages);
-    setChatInput("");
-
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: nextMessages }),
-    });
-    const payload = (await response.json()) as ChatResponse & { error?: string };
-    if (!response.ok) {
-      setError(payload.error || "Unable to interpret chef request.");
-      setState("idle");
-      return;
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: nextMessages }),
+      });
+      const payload = (await response.json()) as ChatResponse & { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Chat request failed");
+      }
+      setWeekConfig(payload.weekConfig);
+      setConfirmationReady(payload.confirmationReady);
+      setMessages((current) => [
+        ...current,
+        {
+          id: messageId("assistant"),
+          role: "assistant",
+          content: payload.reply,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Chat request failed");
+    } finally {
+      setPendingReply(false);
     }
-
-    startTransition(() => {
-      setMessages((current) => [...current, makeMessage("assistant", payload.reply)]);
-      setDraftWeekConfig(payload.weekConfig);
-      setState(payload.confirmationReady ? "confirming" : "idle");
-    });
   }
 
-  async function runSchedule() {
-    if (!draftWeekConfig) {
+  async function submitUserMessage(content: string) {
+    const trimmed = content.trim();
+    if (!trimmed) {
       return;
     }
+    setDraft("");
+    setTranscriptPreview("");
+    setView("chat");
+    const userMessage: ChatMessage = {
+      id: messageId("user"),
+      role: "user",
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    await requestAssistantReply(nextMessages);
+  }
+
+  async function generateSchedule() {
+    if (!weekConfig) {
+      return;
+    }
+    setPendingSchedule(true);
+    setSchedule(null);
+    setReasoningEvents([]);
+    setError("");
+    setEmailStatus("");
 
     try {
-      setState("generating");
-      setSchedule(null);
-      setReasoningEvents([{ type: "phase", content: "Connecting to backend scheduler..." }]);
-      setError("");
-
-      const weekConstraintsMd = buildWeekConstraintsMarkdown(draftWeekConfig);
       const response = await fetch("/api/schedule/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          week_config: draftWeekConfig,
-          week_constraints_md: weekConstraintsMd,
+          week_config: weekConfig,
+          restaurant_config: restaurantSnapshot?.restaurant_config,
           conversation_messages: messages,
+          week_constraints_md: buildConversationSummary(messages),
           run_integrity_check: true,
         }),
       });
 
-      if (!response.body) {
-        throw new Error("Schedule stream did not return a body");
+      if (!response.ok || !response.body) {
+        const payload = (await response.json().catch(() => ({ error: "Schedule stream failed" }))) as { error?: string };
+        throw new Error(payload.error || "Schedule stream failed");
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let streamError = "";
-      let completedSchedule: ScheduleRun | null = null;
 
       while (true) {
-        const { value, done } = await reader.read();
+        const { done, value } = await reader.read();
         if (done) {
           break;
         }
         buffer += decoder.decode(value, { stream: true });
-        while (buffer.includes("\n\n")) {
-          const chunk = buffer.slice(0, buffer.indexOf("\n\n"));
-          buffer = buffer.slice(buffer.indexOf("\n\n") + 2);
-          const event = parseSseEvent(chunk);
-          if (!event) {
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() ?? "";
+
+        for (const chunk of chunks) {
+          const dataLine = chunk
+            .split("\n")
+            .find((line) => line.startsWith("data:"))
+            ?.slice(5)
+            .trim();
+          if (!dataLine) {
             continue;
           }
-          startTransition(() => {
-            setReasoningEvents((current) => [...current, event]);
-          });
+          const event = JSON.parse(dataLine) as ReasoningEvent;
           if (event.type === "complete" && event.content) {
-            completedSchedule = event.content as unknown as ScheduleRun;
-          }
-          if (event.type === "error" || event.status === "fail" || event.status === "failed") {
-            streamError = typeof event.content === "string" ? event.content : "Schedule generation failed";
+            const completed = event.content as ScheduleRun;
+            setSchedule(completed);
+            setEmailRecipient((current) => current || completed.email_recipient || "");
+          } else if (event.type !== "done") {
+            setReasoningEvents((current) => [...current, event]);
           }
         }
       }
-
-      if (streamError) {
-        throw new Error(streamError);
-      }
-      if (!completedSchedule) {
-        throw new Error("Schedule stream completed without a final schedule payload");
-      }
-
-      startTransition(() => {
-        setSchedule(completedSchedule);
-        setState("done");
-      });
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Schedule generation failed");
-      setState("confirming");
+    } finally {
+      setPendingSchedule(false);
     }
   }
 
-  async function sendScheduleEmail() {
-    if (!schedule) {
+  async function sendEmail() {
+    if (!schedule?.schedule_id || !emailRecipient.trim()) {
       return;
     }
-    setSendingEmail(true);
-    const response = await fetch("/api/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        schedule_id: schedule.schedule_id,
-        recipient_email: recipientEmail,
-      }),
-    });
-    const payload = (await response.json()) as { error?: string; recipient_email?: string };
-    if (!response.ok) {
-      setError(payload.error || "Email delivery failed.");
-    } else {
-      setError("");
-      setSchedule((current) =>
-        current
-          ? {
-              ...current,
-              email_sent_at: new Date().toISOString(),
-              email_recipient: payload.recipient_email ?? recipientEmail,
-            }
-          : current,
-      );
+    setEmailStatus("Sending...");
+    try {
+      const response = await fetch("/api/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schedule_id: schedule.schedule_id,
+          recipient_email: emailRecipient.trim(),
+        }),
+      });
+      const payload = (await response.json()) as { error?: string; recipient_email?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Email delivery failed");
+      }
+      setEmailStatus(`Sent to ${payload.recipient_email ?? emailRecipient.trim()}`);
+    } catch (caughtError) {
+      setEmailStatus(caughtError instanceof Error ? caughtError.message : "Email delivery failed");
     }
-    setSendingEmail(false);
-  }
-
-  async function startFromLanding() {
-    const text = landingInput.trim();
-    if (!text) {
-      return;
-    }
-    setView("chat");
-    await sendMessage(text);
-    setLandingInput("");
   }
 
   function startVoiceFlow() {
     setError("");
     setView("chat");
     setVoiceAutoStart(true);
-    setLiveTranscript("");
-    setState("listening");
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f7f5]">
+    <div className="min-h-full">
       {view === "landing" ? (
-        <>
-          <div className="bg-[#353535] px-7 pb-7 pt-10 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[1.05rem] font-semibold tracking-[0.02em]">22:11</span>
-                <ContactRound className="h-5 w-5" strokeWidth={2} />
-              </div>
-              <div className="flex items-center gap-2.5">
-                <div className="flex items-end gap-1">
-                  <span className="h-2.5 w-1 rounded-full bg-white/65" />
-                  <span className="h-4 w-1 rounded-full bg-white/75" />
-                  <span className="h-5.5 w-1 rounded-full bg-white/85" />
-                  <span className="h-7 w-1 rounded-full bg-white" />
-                </div>
-                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-white" strokeWidth="2">
-                  <path d="M2 9.5C5.5 6 8.5 4.5 12 4.5s6.5 1.5 10 5" />
-                  <path d="M5 12.5c2.5-2.5 4.7-3.5 7-3.5s4.5 1 7 3.5" />
-                  <path d="M8.5 16c1.3-1.2 2.4-1.6 3.5-1.6s2.2.4 3.5 1.6" />
-                  <circle cx="12" cy="19" r="1.3" fill="white" stroke="none" />
-                </svg>
-                <div className="rounded-xl bg-white px-2.5 py-0.5 text-sm font-semibold text-[#353535]">100</div>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-3 px-6 pb-5 pt-7">
-            <button className="flex h-12 w-12 items-center justify-center text-[#27355f]">
-              <Menu className="h-8 w-8" strokeWidth={1.75} />
-            </button>
-            <div className="flex min-w-0 items-center gap-3 rounded-[1.2rem] border border-slate-200 bg-white px-6 py-4 shadow-[0_2px_10px_rgba(15,23,42,0.08)]">
-              <span className="truncate text-[1.05rem] font-medium text-slate-700">Acquerello Scheduled</span>
-              <ChevronDown className="h-5 w-5 text-slate-700" />
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="flex h-10 w-10 items-center justify-center text-slate-600">
-                <Bell className="h-7 w-7" strokeWidth={1.75} />
-              </button>
-              <div className="relative">
-                <button className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-300">
-                  <UserCircle2 className="h-10 w-10" strokeWidth={1.5} />
-                </button>
-                <span className="absolute -bottom-1.5 right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[#f7f7f5]" />
-              </div>
-            </div>
-          </div>
-        </>
+        <LandingView
+          draft={draft}
+          onDraftChange={setDraft}
+          onSend={() => void submitUserMessage(draft)}
+          onStartVoice={startVoiceFlow}
+          disabled={pendingReply}
+        />
       ) : (
-        <div className="flex items-center justify-between gap-3 px-6 pb-5 pt-7">
-          <button className="flex h-11 w-11 items-center justify-center text-slate-700">
-            <Menu className="h-8 w-8" strokeWidth={1.75} />
-          </button>
-          <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-[0_2px_10px_rgba(15,23,42,0.08)]">
-            <span className="truncate text-lg font-medium text-slate-700">Acquerello Kitchen</span>
-            <ChevronDown className="h-5 w-5 text-slate-700" />
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="flex h-10 w-10 items-center justify-center text-slate-600">
-              <Bell className="h-7 w-7" strokeWidth={1.75} />
-            </button>
-            <button className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-              <UserCircle2 className="h-10 w-10" strokeWidth={1.5} />
-            </button>
-          </div>
-        </div>
-      )}
+        <div className="flex min-h-full flex-col pb-8">
+          <TopControls />
 
-      {view === "landing" ? (
-        <div className="px-6 pb-14 pt-8">
-          <div className="mx-auto flex min-h-[calc(100vh-260px)] flex-col">
-            <div className="text-center">
-              <p className="text-[3rem] font-semibold tracking-[-0.03em] text-[hsl(var(--primary))]">Acquerello Scheduled</p>
-              <h1 className="mx-auto mt-6 max-w-[15ch] text-[2.6rem] font-semibold leading-[1.05] tracking-[-0.045em] text-slate-900">
-                Ready to generate kitchen schedule?
-              </h1>
-            </div>
-
-            <div className="mt-12 rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_6px_20px_rgba(15,23,42,0.06)]">
-              <Textarea
-                ref={landingInputRef}
-                value={landingInput}
-                onChange={(event) => setLandingInput(event.target.value)}
-                placeholder="tell me what is different this week"
-                className="min-h-[250px] resize-none border-0 bg-transparent px-0 py-0 text-[2rem] leading-[1.3] text-slate-900 shadow-none focus:border-0 focus:ring-0 placeholder:text-slate-300"
-              />
-              <div className="mt-7 flex items-center justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={startVoiceFlow}
-                  className="flex h-[5.4rem] w-[5.4rem] items-center justify-center rounded-full bg-[#dfe4ec] text-slate-800 shadow-[0_3px_10px_rgba(15,23,42,0.12)]"
-                >
-                  <Mic className="h-10 w-10" strokeWidth={1.75} />
-                </button>
-                <button
-                  type="button"
-                  disabled={!landingInput.trim()}
-                  onClick={() => void startFromLanding()}
-                  className="flex h-[5.4rem] min-w-[11.4rem] items-center justify-center rounded-full bg-slate-500 px-10 text-[2.15rem] font-medium text-white shadow-[0_4px_16px_rgba(15,23,42,0.22)] transition disabled:opacity-40"
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="px-4 pb-8">
-          <div className="rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.06)]">
-            <div className="border-b border-slate-200 px-5 py-4">
-              <div className="flex items-center justify-between gap-3">
+          <div className="mx-auto flex w-full max-w-[1120px] flex-1 flex-col gap-5 px-4 pt-6 md:px-0 md:pt-8">
+            <div className="content-panel flex flex-1 min-h-[440px] flex-col rounded-[26px]">
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--tenant-border-color)] px-5 py-4 md:px-6">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Kitchen schedule chat</p>
-                  <p className="mt-1 text-sm text-slate-500">Tell the assistant what changed, confirm it, then generate.</p>
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Acquerello Scheduled</p>
+                  <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-[#111827]">Kitchen scheduling chat</h2>
                 </div>
-                <Badge variant={stateMeta.variant}>{stateMeta.text}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={confirmationReady ? "success" : "muted"}>
+                    {confirmationReady ? "Ready to generate" : "Drafting"}
+                  </Badge>
+                </div>
               </div>
-            </div>
 
-            <div className="max-h-[380px] space-y-3 overflow-y-auto px-4 py-4">
-              {bootLoading ? (
-                <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                  Loading restaurant defaults...
-                </div>
-              ) : null}
+              <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 md:px-6">
+                {messages.length === 0 && !transcriptPreview ? (
+                  <div className="rounded-[22px] border border-dashed border-[var(--tenant-border-color)] bg-[#fbfbfd] px-5 py-8 text-[15px] leading-7 text-[#667085]">
+                    Start by typing or speaking what changed this week. The assistant will confirm the operational
+                    constraints before generation.
+                  </div>
+                ) : null}
 
-              {deferredMessages.map((message) => (
-                <div key={message.id} className={message.role === "assistant" ? "max-w-[92%]" : "ml-auto max-w-[92%]"}>
-                  <div
-                    className={
-                      message.role === "assistant"
-                        ? "rounded-[1.4rem] rounded-tl-md bg-slate-100 px-4 py-3 text-base leading-7 text-slate-900"
-                        : "rounded-[1.4rem] rounded-tr-md bg-[hsl(var(--primary))] px-4 py-3 text-base leading-7 text-white"
-                    }
-                  >
-                    {message.content}
+                {messages.map((message) => (
+                  <MessageBubble key={message.id} message={message} />
+                ))}
+
+                {transcriptPreview ? (
+                  <div className="flex justify-end">
+                    <div className="max-w-[88%] rounded-[22px] border border-dashed border-[#93c5fd] bg-[#eff6ff] px-4 py-3 text-[15px] leading-7 text-[#1d4ed8] md:max-w-[78%]">
+                      {transcriptPreview}
+                    </div>
+                  </div>
+                ) : null}
+
+                {pendingReply ? (
+                  <div className="flex justify-start">
+                    <div className="inline-flex items-center gap-3 rounded-[22px] bg-white px-4 py-3 text-[15px] text-[#475467] shadow-[0_6px_18px_rgba(15,23,42,0.05)]">
+                      <LoaderCircle className="h-4 w-4 animate-spin text-[#2563eb]" />
+                      Aligning the weekly constraints...
+                    </div>
+                  </div>
+                ) : null}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div className="border-t border-[var(--tenant-border-color)] px-5 py-4 md:px-6">
+                <div className="rounded-[24px] border border-[var(--tenant-border-color)] bg-[#fbfbfd] p-3">
+                  <Textarea
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder="tell me what is different this week"
+                    className="min-h-[112px] resize-none border-0 bg-transparent px-2 py-2 text-[16px] shadow-none ring-0 placeholder:text-[#98a2b3] focus:border-0 focus:ring-0"
+                  />
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <VoiceInput
+                      autoStart={voiceAutoStart}
+                      onRecordingStateChange={({ isRecording, isTranscribing }) => {
+                        if (!isRecording && !isTranscribing) {
+                          setVoiceAutoStart(false);
+                        }
+                      }}
+                      onTranscriptPreview={setTranscriptPreview}
+                      onError={setError}
+                      onTranscript={async (text) => {
+                        setVoiceAutoStart(false);
+                        await submitUserMessage(text);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => void submitUserMessage(draft)}
+                      disabled={pendingReply || !draft.trim()}
+                      className="h-[62px] min-w-[148px] rounded-full px-6 text-[17px] shadow-[0_12px_24px_rgba(37,99,235,0.22)]"
+                    >
+                      {pendingReply ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                      Send
+                    </Button>
                   </div>
                 </div>
-              ))}
-
-              {(voiceRecording || voiceTranscribing || liveTranscript) ? (
-                <div className="ml-auto max-w-[92%]">
-                  <div className="rounded-[1.4rem] rounded-tr-md bg-[hsl(var(--primary))] px-4 py-3 text-base leading-7 text-white">
-                    {liveTranscript || (voiceTranscribing ? "Transcribing audio..." : "Listening...")}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="border-t border-slate-200 px-4 py-4">
-              <div className="flex items-center gap-3">
-                <Input
-                  value={chatInput}
-                  disabled={state === "processing" || state === "generating"}
-                  onChange={(event) => setChatInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      void sendMessage(chatInput);
-                    }
-                  }}
-                  placeholder="tell me what is different this week"
-                  className="h-14 rounded-full px-5 text-base"
-                />
-                <button
-                  type="button"
-                  onClick={startVoiceFlow}
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-[#dfe4ec] text-slate-800"
-                >
-                  <Mic className="h-6 w-6" strokeWidth={1.75} />
-                </button>
-                <button
-                  type="button"
-                  disabled={!chatInput.trim() || state === "processing" || state === "generating"}
-                  onClick={() => void sendMessage(chatInput)}
-                  className="flex h-14 min-w-[110px] items-center justify-center rounded-full bg-slate-500 px-5 text-xl font-medium text-white disabled:opacity-40"
-                >
-                  Send
-                </button>
               </div>
             </div>
-          </div>
-
-          <div className="mt-4 space-y-4">
-            {state === "confirming" ? (
-              <div className="flex flex-col gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_4px_16px_rgba(15,23,42,0.05)]">
-                <Button onClick={() => void runSchedule()} className="h-12 w-full rounded-full text-base">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Confirm and generate
-                </Button>
-                <Button variant="secondary" onClick={() => setState("revising")} className="h-12 w-full rounded-full text-base">
-                  Revise
-                </Button>
-              </div>
-            ) : null}
 
             {error ? (
-              <div className="flex items-start gap-3 rounded-[1.5rem] border border-[hsl(var(--danger))]/20 bg-[hsl(var(--danger))]/8 px-4 py-3 text-sm text-[hsl(var(--foreground))]">
-                <AlertTriangle className="mt-0.5 h-4 w-4 text-[hsl(var(--danger))]" />
-                <span>{error}</span>
+              <div className="rounded-[20px] border border-[#fecaca] bg-[#fff1f2] px-5 py-4 text-[14px] text-[#b42318]">
+                {error}
               </div>
             ) : null}
 
-            {(voiceRecording || voiceTranscribing || voiceAutoStart) ? (
-              <VoiceInput
-                autoStart={voiceAutoStart}
-                disabled={state === "processing" || state === "generating"}
-                onTranscriptPreview={(text) => setLiveTranscript(text)}
-                onError={(message) => {
-                  setError(message);
-                  setVoiceAutoStart(false);
-                }}
-                onRecordingStateChange={({ isRecording, isTranscribing }) => {
-                  setVoiceRecording(isRecording);
-                  setVoiceTranscribing(isTranscribing);
-                  if (isRecording) {
-                    setState("listening");
-                    setVoiceAutoStart(false);
-                  } else if (isTranscribing) {
-                    setState("processing");
-                  } else {
-                    setState((current) => (current === "listening" ? "idle" : current));
-                  }
-                }}
-                onTranscript={async (text) => {
-                  setVoiceAutoStart(false);
-                  await sendMessage(text);
-                }}
-              />
-            ) : null}
-
-            {reasoningEvents.length > 0 || state === "generating" ? (
-              <ReasoningStream events={reasoningEvents} running={state === "generating"} />
-            ) : null}
-
-            {schedule ? (
-              <>
-                <SchedulePreview schedule={schedule} weekConfig={draftWeekConfig} />
-                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_4px_16px_rgba(15,23,42,0.05)]">
-                  <div className="flex flex-col gap-3">
-                    <Input
-                      value={recipientEmail}
-                      onChange={(event) => setRecipientEmail(event.target.value)}
-                      type="email"
-                      placeholder="chef@restaurant.com"
-                      className="h-12 rounded-full px-5"
-                    />
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <Button disabled={sendingEmail} onClick={() => void sendScheduleEmail()} className="h-12 flex-1 rounded-full text-base">
-                        {sendingEmail ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        Send to email
-                      </Button>
-                      <a
-                        className={buttonVariants({ variant: "secondary", className: "h-12 flex-1 rounded-full text-base" })}
-                        href={`/api/history/${schedule.schedule_id}/artifacts/schedule_output.xlsx`}
-                      >
-                        Download Excel
-                      </a>
+            <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+              <div className="space-y-5">
+                <div className="content-panel rounded-[24px] p-5 md:p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Generate</p>
+                      <h3 className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-[#111827]">Run this week</h3>
+                      <p className="mt-2 text-[15px] leading-7 text-[#667085]">
+                        Once the draft looks right, run the integrity check and deterministic scheduler.
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="muted">{schedule.schedule_id.slice(0, 8)}</Badge>
-                      {schedule.email_sent_at ? <Badge variant="success">Sent</Badge> : null}
-                    </div>
+                    <Badge variant={weekConfig ? "success" : "muted"}>{weekConfig ? "Draft ready" : "Waiting"}</Badge>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <Button type="button" size="lg" disabled={!canGenerate} onClick={() => void generateSchedule()}>
+                      {pendingSchedule ? <LoaderCircle className="h-5 w-5 animate-spin" /> : null}
+                      Generate schedule
+                    </Button>
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="secondary"
+                      onClick={() => {
+                        setView("landing");
+                        setDraft("");
+                        setMessages([]);
+                        setTranscriptPreview("");
+                        setWeekConfig(restaurantSnapshot?.week_config ?? null);
+                        setSchedule(null);
+                        setReasoningEvents([]);
+                        setConfirmationReady(false);
+                        setError("");
+                        setEmailStatus("");
+                      }}
+                    >
+                      Start over
+                    </Button>
                   </div>
                 </div>
-              </>
-            ) : null}
+
+                <ReasoningStream events={reasoningEvents} running={pendingSchedule} />
+              </div>
+
+              <div className="space-y-5">
+                {schedule ? (
+                  <>
+                    <SchedulePreview schedule={schedule} weekConfig={weekConfig} />
+                    <div className="content-panel rounded-[24px] p-5 md:p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Deliver</p>
+                          <h3 className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-[#111827]">Email workbook</h3>
+                        </div>
+                        <Badge variant={schedule.email_sent_at ? "success" : "muted"}>
+                          {schedule.email_sent_at ? "Sent" : "Not sent"}
+                        </Badge>
+                      </div>
+
+                      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                        <Input
+                          value={emailRecipient}
+                          onChange={(event) => setEmailRecipient(event.target.value)}
+                          placeholder="chef@acquerello.com"
+                          className="h-12 rounded-2xl"
+                        />
+                        <Button type="button" size="lg" onClick={() => void sendEmail()} disabled={!emailRecipient.trim()}>
+                          Send email
+                        </Button>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        {schedule.excel_url ? (
+                          <a
+                            href={`/api/history/${schedule.schedule_id}/artifacts/schedule_output.xlsx`}
+                            className="inline-flex h-11 items-center justify-center rounded-xl border border-[var(--tenant-border-color)] bg-white px-4 text-sm font-medium text-[#111827] transition hover:bg-[#f8fafc]"
+                          >
+                            Download workbook
+                          </a>
+                        ) : null}
+                        <a
+                          href={`/history/${schedule.schedule_id}`}
+                          className="inline-flex h-11 items-center justify-center rounded-xl border border-[var(--tenant-border-color)] bg-white px-4 text-sm font-medium text-[#111827] transition hover:bg-[#f8fafc]"
+                        >
+                          Open run detail
+                        </a>
+                      </div>
+
+                      {emailStatus ? <p className="mt-4 text-sm text-[#667085]">{emailStatus}</p> : null}
+                    </div>
+                  </>
+                ) : (
+                  <div className="content-panel rounded-[24px] p-6">
+                    <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Preview</p>
+                    <h3 className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-[#111827]">Schedule output</h3>
+                    <p className="mt-3 text-[15px] leading-7 text-[#667085]">
+                      The weekly pivot preview, validation result, and delivery actions will appear here after the run
+                      completes.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

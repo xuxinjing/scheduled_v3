@@ -29,7 +29,7 @@ export function HistoryList() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="rounded-[24px]">
         <CardContent className="flex items-center gap-3 py-6 text-sm text-[hsl(var(--muted-foreground))]">
           <LoaderCircle className="h-4 w-4 animate-spin" />
           Loading schedule history...
@@ -40,7 +40,7 @@ export function HistoryList() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="rounded-[24px]">
         <CardContent className="py-6 text-sm text-[hsl(var(--danger))]">{error}</CardContent>
       </Card>
     );
@@ -48,7 +48,7 @@ export function HistoryList() {
 
   if (items.length === 0) {
     return (
-      <Card>
+      <Card className="rounded-[24px]">
         <CardContent className="py-6 text-sm text-[hsl(var(--muted-foreground))]">
           No saved schedules yet. Generate one from the main screen first.
         </CardContent>
@@ -59,7 +59,7 @@ export function HistoryList() {
   return (
     <div className="space-y-3">
       {items.map((item) => (
-        <Card key={item.id}>
+        <Card key={item.id} className="rounded-[24px]">
           <CardContent className="space-y-4 pt-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">

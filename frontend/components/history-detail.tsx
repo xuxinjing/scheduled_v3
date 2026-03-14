@@ -13,7 +13,7 @@ export function HistoryDetail({ detail }: { detail: ScheduleDetail }) {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="rounded-[24px]">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -49,7 +49,7 @@ export function HistoryDetail({ detail }: { detail: ScheduleDetail }) {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
-        <Card>
+        <Card className="rounded-[24px]">
           <CardHeader>
             <div className="flex items-center gap-2">
               <TriangleAlert className="h-4 w-4 text-[hsl(var(--warning))]" />
@@ -71,7 +71,7 @@ export function HistoryDetail({ detail }: { detail: ScheduleDetail }) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-[24px]">
           <CardHeader>
             <CardTitle className="text-base">Validator report</CardTitle>
           </CardHeader>
