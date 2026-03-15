@@ -170,14 +170,16 @@ export function ClaudeMobileUI() {
   return (
     <div
       style={{
-        width: 375,
+        width: "100vw",
         minHeight: "100vh",
-        backgroundColor: "#F2EDE4",
+        margin: 0,
+        padding: 0,
+        backgroundColor: "#F4EFE6",
         display: "flex",
         flexDirection: "column",
         fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
         position: "relative",
-        margin: "0 auto",
+        boxSizing: "border-box",
       }}
     >
       {/* ── Top navigation bar ───────────────────────────────────── */}
@@ -190,7 +192,7 @@ export function ClaudeMobileUI() {
           paddingLeft: 16,
           paddingRight: 16,
           paddingBottom: 8,
-          backgroundColor: "#F2EDE4",
+          backgroundColor: "#F4EFE6",
         }}
       >
         {/* Hamburger button */}
@@ -200,14 +202,15 @@ export function ClaudeMobileUI() {
           style={{
             width: 40,
             height: 40,
-            borderRadius: 999,
-            backgroundColor: "rgba(255,255,255,0.75)",
+            borderRadius: "50%",
+            backgroundColor: "#EFEFEF",
             border: "none",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
           }}
         >
           <HamburgerIcon />
@@ -218,7 +221,7 @@ export function ClaudeMobileUI() {
           <div
             style={{
               fontSize: 16,
-              fontWeight: 700,
+              fontWeight: 600,
               color: "#2D2D2D",
               lineHeight: 1.2,
               letterSpacing: "-0.01em",
@@ -246,8 +249,8 @@ export function ClaudeMobileUI() {
           style={{
             width: 40,
             height: 40,
-            borderRadius: 999,
-            backgroundColor: "rgba(255,255,255,0.75)",
+            borderRadius: "50%",
+            backgroundColor: "#EFEFEF",
             border: "none",
             cursor: "pointer",
             display: "flex",
@@ -255,6 +258,7 @@ export function ClaudeMobileUI() {
             justifyContent: "center",
             flexShrink: 0,
             color: "#2D2D2D",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
           }}
         >
           <GhostIcon />
@@ -281,15 +285,15 @@ export function ClaudeMobileUI() {
         <h1
           style={{
             fontFamily: "'Tiempos Text', Georgia, 'Times New Roman', serif",
-            fontSize: 32,
-            fontWeight: 700,
+            fontSize: 28,
+            fontWeight: 600,
             color: "#2D2D2D",
             textAlign: "center",
-            lineHeight: 1.2,
+            lineHeight: 1.15,
             maxWidth: 280,
             marginTop: 20,
             marginBottom: 0,
-            letterSpacing: "-0.02em",
+            letterSpacing: "-0.01em",
           }}
         >
           How can I help you this morning?
@@ -303,8 +307,8 @@ export function ClaudeMobileUI() {
           bottom: 0,
           left: 0,
           right: 0,
-          padding: "8px 12px 28px",
-          backgroundColor: "#F2EDE4",
+          padding: "8px 16px 28px",
+          backgroundColor: "#F4EFE6",
         }}
       >
         <div
@@ -318,7 +322,7 @@ export function ClaudeMobileUI() {
             paddingTop: 10,
             paddingBottom: 10,
             gap: 8,
-            boxShadow: "0 2px 12px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
           }}
         >
           {/* Plus button */}
