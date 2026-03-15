@@ -1,6 +1,18 @@
 "use client";
 
-import { ArrowUp, ChevronRight, LoaderCircle, Menu, Mic, Plus, X } from "lucide-react";
+import {
+  ArrowUp,
+  ChevronRight,
+  Image as ImageIcon,
+  LoaderCircle,
+  Menu,
+  Mic,
+  Paintbrush,
+  PenLine,
+  Plus,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { ReasoningStream } from "@/components/reasoning-stream";
@@ -31,6 +43,27 @@ const fakeConversations = [
   { title: "Week of February 17", preview: "Peak service on Friday and Saturday", active: false },
 ];
 
+const suggestions = [
+  {
+    icon: Paintbrush,
+    title: "Create schedule",
+    subtitle: "for this week",
+    color: "#10a37f",
+  },
+  {
+    icon: PenLine,
+    title: "Update constraints",
+    subtitle: "time off & changes",
+    color: "#10a37f",
+  },
+  {
+    icon: Sparkles,
+    title: "Help me plan",
+    subtitle: "training & coverage",
+    color: "#10a37f",
+  },
+];
+
 function messageId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
@@ -57,7 +90,7 @@ function MobileDrawer({
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          "fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 md:hidden",
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
         )}
         onClick={onClose}
@@ -66,44 +99,39 @@ function MobileDrawer({
       {/* Panel */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-full w-[82%] max-w-[320px] flex-col bg-[#f5f5f7] pb-5 pt-[env(safe-area-inset-top,0px)] shadow-[4px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:hidden",
+          "fixed left-0 top-0 z-50 flex h-full w-[80%] max-w-[300px] flex-col bg-[var(--chatgpt-sidebar-bg)] pb-4 pt-[env(safe-area-inset-top,0px)] shadow-xl transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:hidden",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pb-2 pt-5">
-          <p className="text-[17px] font-semibold text-[#1d1d1f]">Chats</p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-[#86868b] transition-colors active:bg-black/10"
-          >
-            <X className="h-4 w-4" strokeWidth={2} />
-          </button>
-        </div>
-
-        {/* New chat */}
-        <div className="px-4 pt-3">
+        <div className="flex items-center justify-between px-4 pb-2 pt-4">
           <button
             type="button"
             onClick={() => {
               onNewChat();
               onClose();
             }}
-            className="flex w-full items-center gap-3 rounded-[12px] bg-white px-3.5 py-2.5 text-left shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition-colors active:bg-[#f0f0f2]"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[14px] font-medium text-[var(--chatgpt-text)] transition-colors active:bg-[var(--chatgpt-hover)]"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-white">
-              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-            </div>
-            <span className="text-[15px] font-medium text-[#1d1d1f]">New Chat</span>
+            <Plus className="h-5 w-5" strokeWidth={1.8} />
+            New chat
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--chatgpt-text-secondary)] transition-colors active:bg-[var(--chatgpt-hover)]"
+          >
+            <X className="h-5 w-5" strokeWidth={1.8} />
           </button>
         </div>
 
-        {/* Section label */}
-        <p className="mt-5 px-5 text-[12px] font-semibold text-[#86868b]">Recent</p>
+        {/* Recent label */}
+        <p className="mt-4 px-4 text-[12px] font-semibold text-[var(--chatgpt-text-secondary)] uppercase tracking-wide">
+          Recent
+        </p>
 
         {/* Conversations */}
-        <div className="mt-2 flex-1 overflow-y-auto px-3">
+        <div className="mt-1 flex-1 overflow-y-auto px-2">
           <div className="space-y-0.5">
             {fakeConversations.map((conversation) => (
               <button
@@ -111,25 +139,30 @@ function MobileDrawer({
                 type="button"
                 onClick={onClose}
                 className={cn(
-                  "flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-left transition-colors",
-                  conversation.active ? "bg-black/[0.06]" : "active:bg-black/[0.04]",
+                  "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors",
+                  conversation.active ? "bg-[var(--chatgpt-hover)]" : "hover:bg-[var(--chatgpt-hover)]",
                 )}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium text-[#1d1d1f]">{conversation.title}</p>
-                  <p className="mt-0.5 truncate text-[13px] text-[#86868b]">{conversation.preview}</p>
+                  <p className="truncate text-[14px] font-medium text-[var(--chatgpt-text)]">{conversation.title}</p>
+                  <p className="mt-0.5 truncate text-[12px] text-[var(--chatgpt-text-secondary)]">{conversation.preview}</p>
                 </div>
-                <ChevronRight className="ml-2 h-4 w-4 flex-shrink-0 text-[#c7c7cc]" />
+                <ChevronRight className="ml-2 h-4 w-4 flex-shrink-0 text-[#c5c5c5]" />
               </button>
             ))}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-auto px-5">
-          <div className="border-t border-black/5 pt-4">
-            <p className="text-[13px] font-medium text-[#1d1d1f]">Acquerello Scheduled</p>
-            <p className="text-[11px] text-[#86868b]">Kitchen scheduling workspace</p>
+        <div className="mt-auto border-t border-[var(--chatgpt-border)] px-4 pt-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--chatgpt-green)] text-white text-[13px] font-semibold">
+              A
+            </div>
+            <div>
+              <p className="text-[13px] font-medium text-[var(--chatgpt-text)]">Acquerello</p>
+              <p className="text-[11px] text-[var(--chatgpt-text-secondary)]">Scheduled</p>
+            </div>
           </div>
         </div>
       </aside>
@@ -137,26 +170,119 @@ function MobileDrawer({
   );
 }
 
-/* ─── Top bar (mobile menu button) ────────────────────────────── */
+/* ─── ChatGPT-style top bar ────────────────────────────────────── */
 function TopBar({
   onOpenMenu,
+  title,
   rightSlot,
 }: {
   onOpenMenu: () => void;
+  title?: string;
   rightSlot?: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between px-1 pb-2 pt-[max(env(safe-area-inset-top,12px),12px)] md:px-0 md:pt-6">
+    <div className="flex items-center justify-between px-3 pb-2 pt-[max(env(safe-area-inset-top,8px),8px)] md:px-4 md:pt-3">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onOpenMenu}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--chatgpt-text)] transition-colors hover:bg-[var(--chatgpt-hover)] md:hidden"
+          aria-label="Open navigation"
+        >
+          <Menu className="h-6 w-6" strokeWidth={1.5} />
+        </button>
+        <h1 className="text-[18px] font-semibold text-[var(--chatgpt-text)]">
+          {title || "ChatGPT"}
+        </h1>
+      </div>
+      <div className="flex items-center gap-1">
+        {rightSlot}
+      </div>
+    </div>
+  );
+}
+
+/* ─── ChatGPT Input Bar ──────────────────────────────────────── */
+function ChatInputBar({
+  draft,
+  onDraftChange,
+  onSend,
+  onStartVoice,
+  onAttach,
+  disabled,
+  placeholder,
+  voiceAutoStart,
+  onRecordingStateChange,
+  onTranscriptPreview,
+  onError,
+  onTranscript,
+}: {
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  onStartVoice: () => void;
+  onAttach?: () => void;
+  disabled: boolean;
+  placeholder?: string;
+  voiceAutoStart?: boolean;
+  onRecordingStateChange?: (state: { isRecording: boolean; isTranscribing: boolean }) => void;
+  onTranscriptPreview?: (text: string) => void;
+  onError?: (message: string) => void;
+  onTranscript?: (text: string) => Promise<void>;
+}) {
+  return (
+    <div className="chatgpt-input-container flex items-end gap-2">
+      {/* Attach button */}
       <button
         type="button"
-        onClick={onOpenMenu}
-        className="flex h-10 w-10 items-center justify-center rounded-full text-[#1d1d1f] transition-colors active:bg-black/5 md:hidden"
-        aria-label="Open navigation"
+        onClick={onAttach}
+        className="mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[var(--chatgpt-text-secondary)] transition-colors hover:bg-[var(--chatgpt-hover)]"
+        aria-label="Attach"
       >
-        <Menu className="h-6 w-6" strokeWidth={1.5} />
+        <Plus className="h-5 w-5" strokeWidth={1.8} />
       </button>
-      <div className="flex-1" />
-      {rightSlot}
+
+      {/* Text input */}
+      <textarea
+        value={draft}
+        onChange={(event) => onDraftChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            if (draft.trim() && !disabled) onSend();
+          }
+        }}
+        placeholder={placeholder || "Message"}
+        rows={1}
+        className="max-h-[120px] min-h-[36px] w-full flex-1 resize-none bg-transparent py-1.5 text-[16px] leading-relaxed text-[var(--chatgpt-text)] outline-none placeholder:text-[var(--chatgpt-text-secondary)]"
+      />
+
+      {/* Mic or Send button */}
+      {draft.trim() ? (
+        <button
+          type="button"
+          onClick={onSend}
+          disabled={disabled}
+          className="mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--chatgpt-text)] text-white transition-all hover:opacity-80 disabled:opacity-40"
+          aria-label="Send"
+        >
+          {disabled ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+          )}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onStartVoice}
+          disabled={disabled}
+          className="mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--chatgpt-text)] text-white transition-all hover:opacity-80 disabled:opacity-40"
+          aria-label="Voice input"
+        >
+          <Mic className="h-4 w-4" strokeWidth={2} />
+        </button>
+      )}
     </div>
   );
 }
@@ -167,6 +293,7 @@ function LandingView({
   onDraftChange,
   onSend,
   onStartVoice,
+  onSuggestionClick,
   disabled,
   onOpenMenu,
 }: {
@@ -174,79 +301,68 @@ function LandingView({
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onStartVoice: () => void;
+  onSuggestionClick: (text: string) => void;
   disabled: boolean;
   onOpenMenu: () => void;
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex min-h-full flex-col bg-white">
       <TopBar onOpenMenu={onOpenMenu} />
 
-      <div className="mx-auto flex w-full max-w-[680px] flex-1 flex-col items-center justify-center px-2 pb-10">
-        {/* Title */}
-        <div className="text-center">
-          <h1 className="brand-serif text-[32px] leading-tight text-[#1d1d1f] md:text-[48px]">
-            Acquerello Scheduled
+      <div className="mx-auto flex w-full max-w-[680px] flex-1 flex-col items-center justify-center px-4 pb-6">
+        {/* ChatGPT logo/title */}
+        <div className="text-center mb-8">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--chatgpt-border)]">
+            <Sparkles className="h-6 w-6 text-[var(--chatgpt-text)]" strokeWidth={1.5} />
+          </div>
+          <h1 className="text-[22px] font-semibold text-[var(--chatgpt-text)]">
+            What can I help with?
           </h1>
-          <p className="mt-3 text-[17px] text-[#86868b] md:text-[20px]">
-            What&rsquo;s different this week?
+        </div>
+
+        {/* Suggestion chips — horizontal scroll on mobile */}
+        <div className="mb-8 flex w-full gap-3 overflow-x-auto pb-2 px-1 snap-x">
+          {suggestions.map((suggestion) => {
+            const Icon = suggestion.icon;
+            return (
+              <button
+                key={suggestion.title}
+                type="button"
+                onClick={() => onSuggestionClick(`${suggestion.title} ${suggestion.subtitle}`)}
+                className="chatgpt-suggestion flex flex-col gap-1 snap-start flex-shrink-0"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-[var(--chatgpt-green)]" strokeWidth={1.8} />
+                  <span className="text-[14px] font-medium text-[var(--chatgpt-text)]">{suggestion.title}</span>
+                </div>
+                <span className="text-[13px] text-[var(--chatgpt-text-secondary)]">{suggestion.subtitle}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sticky bottom input */}
+      <div className="sticky bottom-0 w-full bg-white px-3 pb-[max(env(safe-area-inset-bottom,8px),8px)] pt-2 md:px-0">
+        <div className="mx-auto max-w-[680px]">
+          <ChatInputBar
+            draft={draft}
+            onDraftChange={onDraftChange}
+            onSend={onSend}
+            onStartVoice={onStartVoice}
+            disabled={disabled}
+            placeholder="Message"
+          />
+          <p className="mt-2 text-center text-[12px] text-[var(--chatgpt-text-secondary)]">
+            AI can make mistakes. Check important info.
           </p>
         </div>
-
-        {/* Input card */}
-        <div className="apple-card mt-8 w-full rounded-[20px] p-4 md:mt-10">
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(event) => onDraftChange(event.target.value)}
-            placeholder="Chef is off Tuesday, CDC returns Friday..."
-            rows={4}
-            className="w-full resize-none bg-transparent px-1 py-1 text-[16px] leading-relaxed text-[#1d1d1f] outline-none placeholder:text-[#c7c7cc] md:text-[17px]"
-          />
-
-          {/* Actions — bottom-right */}
-          <div className="mt-3 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onStartVoice}
-              disabled={disabled}
-              className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#f0f0f2] text-[#86868b] transition-colors hover:bg-[#e4e4e7] active:bg-[#dadadd] disabled:opacity-40"
-              aria-label="Voice input"
-            >
-              <Mic className="h-4 w-4" strokeWidth={2} />
-            </button>
-
-            <button
-              type="button"
-              onClick={onSend}
-              disabled={disabled || !draft.trim()}
-              className={cn(
-                "flex h-[34px] w-[34px] items-center justify-center rounded-full transition-all",
-                draft.trim()
-                  ? "bg-[hsl(var(--primary))] text-white shadow-[0_2px_8px_rgba(0,122,255,0.3)]"
-                  : "bg-[#e8e8ed] text-[#c7c7cc]",
-              )}
-              aria-label="Send"
-            >
-              {disabled ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
-              )}
-            </button>
-          </div>
-        </div>
-
-        <p className="mt-5 px-4 text-center text-[13px] leading-5 text-[#86868b]">
-          Speak naturally about time off, service level changes, station coverage, or training goals.
-        </p>
       </div>
     </div>
   );
 }
 
-/* ─── Voice capture ───────────────────────────────────────────── */
+/* ─── Voice capture — ChatGPT style ───────────────────────────── */
 function VoiceCaptureView({
   transcriptPreview,
   onOpenMenu,
@@ -267,21 +383,15 @@ function VoiceCaptureView({
   autoStart: boolean;
 }) {
   return (
-    <div className="flex min-h-full flex-col">
-      <TopBar
-        onOpenMenu={onOpenMenu}
-        rightSlot={
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[15px] font-medium text-[hsl(var(--primary))] transition-opacity active:opacity-60"
-          >
-            Done
-          </button>
-        }
-      />
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#0d0d0d]">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top,12px),12px)] pb-2">
+        <h2 className="text-[16px] font-semibold text-white/90">ChatGPT Voice</h2>
+        <div className="flex-1" />
+      </div>
 
-      <div className="mx-auto flex w-full max-w-[680px] flex-1 flex-col items-center justify-center px-6 pb-16">
+      {/* Center — Voice orb */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6">
         <VoiceInput
           variant="fullscreen"
           autoStart={autoStart}
@@ -292,31 +402,68 @@ function VoiceCaptureView({
         />
 
         {/* Live transcript */}
-        <div className="apple-card mt-8 min-h-[80px] w-full max-w-[560px] rounded-[16px] px-5 py-4 text-center">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[#86868b]">Live transcript</p>
-          <p className="mt-3 text-[17px] leading-7 text-[#1d1d1f]">
-            {transcriptPreview || "Start speaking about this week\u2019s changes\u2026"}
-          </p>
+        {transcriptPreview && (
+          <div className="mt-8 max-w-[400px] rounded-2xl bg-white/10 px-5 py-4 text-center">
+            <p className="text-[16px] leading-relaxed text-white/90">{transcriptPreview}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom controls */}
+      <div className="flex items-center justify-center gap-4 px-4 pb-[max(env(safe-area-inset-bottom,20px),20px)] pt-4">
+        {/* Thinking chip */}
+        <div className="thinking-chip active">
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>Think...</span>
+          <X className="h-3 w-3 ml-1 opacity-60" />
         </div>
+
+        <div className="flex-1" />
+
+        {/* Mic icon */}
+        <button
+          type="button"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:text-white"
+          aria-label="Microphone"
+        >
+          <Mic className="h-5 w-5" strokeWidth={1.8} />
+        </button>
+
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+          aria-label="Close voice"
+        >
+          <X className="h-5 w-5" strokeWidth={1.8} />
+        </button>
       </div>
     </div>
   );
 }
 
-/* ─── Message bubble ──────────────────────────────────────────── */
+/* ─── Message bubble — ChatGPT style ─────────────────────────── */
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isAssistant = message.role === "assistant";
   return (
     <div className={cn("flex w-full", isAssistant ? "justify-start" : "justify-end")}>
-      <div
-        className={cn(
-          "text-[15px] leading-relaxed",
-          isAssistant
-            ? "apple-card w-full rounded-[16px] px-4 py-3.5 text-[#1d1d1f]"
-            : "max-w-[82%] rounded-[18px] bg-[hsl(var(--primary))] px-4 py-3 text-white md:max-w-[70%]",
+      <div className="flex gap-3 max-w-full">
+        {isAssistant && (
+          <div className="mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--chatgpt-green)] text-white">
+            <Sparkles className="h-3.5 w-3.5" />
+          </div>
         )}
-      >
-        {message.content}
+        <div
+          className={cn(
+            "text-[15px] leading-relaxed",
+            isAssistant
+              ? "chatgpt-message-assistant text-[var(--chatgpt-text)]"
+              : "chatgpt-message-user text-[var(--chatgpt-text)]",
+          )}
+        >
+          {message.content}
+        </div>
       </div>
     </div>
   );
@@ -511,7 +658,7 @@ export function ChatUI() {
   }
 
   return (
-    <div className="min-h-full">
+    <div className="min-h-full bg-white">
       <MobileDrawer
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -524,6 +671,7 @@ export function ChatUI() {
           onDraftChange={setDraft}
           onSend={() => void submitUserMessage(draft)}
           onStartVoice={startVoiceFlow}
+          onSuggestionClick={(text) => void submitUserMessage(text)}
           disabled={pendingReply}
           onOpenMenu={() => setMobileMenuOpen(true)}
         />
@@ -549,27 +697,25 @@ export function ChatUI() {
           }}
         />
       ) : (
-        /* ─── Chat view ────────────────────────────────────── */
-        <div className="flex min-h-full flex-col pb-[max(env(safe-area-inset-bottom,16px),16px)]">
-          <TopBar onOpenMenu={() => setMobileMenuOpen(true)} />
+        /* ─── Chat view — ChatGPT style ───────────────────── */
+        <div className="flex min-h-full flex-col bg-white pb-[max(env(safe-area-inset-bottom,8px),8px)]">
+          <TopBar
+            onOpenMenu={() => setMobileMenuOpen(true)}
+            title="ChatGPT"
+            rightSlot={
+              confirmationReady ? (
+                <Badge variant="success">Ready</Badge>
+              ) : undefined
+            }
+          />
 
-          <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col pt-2 md:pt-4">
-            {/* Header */}
-            <div className="mb-4 flex items-center justify-between px-1">
-              <div>
-                <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">Conversation</h2>
-              </div>
-              <Badge variant={confirmationReady ? "success" : "muted"}>
-                {confirmationReady ? "Ready" : "Drafting"}
-              </Badge>
-            </div>
-
+          <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col px-4 pt-2 md:pt-4">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto pb-6">
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 {messages.length === 0 && !transcriptPreview && (
-                  <div className="rounded-[14px] border border-dashed border-[#d2d2d7] bg-white/60 px-5 py-5 text-[15px] leading-relaxed text-[#86868b]">
-                    Start by typing or speaking what changed this week. The assistant will confirm the constraints before generation.
+                  <div className="text-center py-12 text-[var(--chatgpt-text-secondary)] text-[15px]">
+                    Start a conversation about this week&rsquo;s schedule changes.
                   </div>
                 )}
 
@@ -579,32 +725,37 @@ export function ChatUI() {
 
                 {transcriptPreview && (
                   <div className="flex justify-end">
-                    <div className="max-w-[82%] rounded-[18px] border border-dashed border-[hsl(var(--primary))]/30 bg-[hsl(var(--accent))] px-4 py-3 text-[15px] leading-relaxed text-[hsl(var(--primary))] md:max-w-[70%]">
+                    <div className="chatgpt-message-user border border-dashed border-[var(--chatgpt-green)]/30 text-[var(--chatgpt-text-secondary)]">
                       {transcriptPreview}
                     </div>
                   </div>
                 )}
 
                 {pendingReply && (
-                  <div className="apple-card rounded-[14px] px-4 py-3.5 text-[15px] text-[#86868b]">
-                    <div className="inline-flex items-center gap-2.5">
-                      <LoaderCircle className="h-4 w-4 animate-spin text-[hsl(var(--primary))]" />
-                      Aligning constraints...
+                  <div className="flex gap-3">
+                    <div className="mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--chatgpt-green)] text-white">
+                      <Sparkles className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="chatgpt-message-assistant">
+                      <div className="inline-flex items-center gap-2 text-[var(--chatgpt-text-secondary)]">
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                        Thinking...
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {error && (
-                  <div className="rounded-[14px] bg-[hsl(var(--danger))]/[0.08] px-4 py-3.5 text-[14px] text-[hsl(var(--danger))]">
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-600">
                     {error}
                   </div>
                 )}
 
                 {/* Generate action card */}
                 {weekConfig && (
-                  <div className="apple-card rounded-[16px] p-5">
-                    <h3 className="text-[17px] font-semibold text-[#1d1d1f]">Generate schedule</h3>
-                    <p className="mt-1 text-[14px] leading-relaxed text-[#86868b]">
+                  <div className="rounded-2xl border border-[var(--chatgpt-border)] bg-[var(--chatgpt-sidebar-bg)] p-5">
+                    <h3 className="text-[16px] font-semibold text-[var(--chatgpt-text)]">Generate schedule</h3>
+                    <p className="mt-1 text-[14px] text-[var(--chatgpt-text-secondary)]">
                       Run the integrity check and deterministic scheduler.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2.5">
@@ -629,9 +780,9 @@ export function ChatUI() {
                   <>
                     <SchedulePreview schedule={schedule} weekConfig={weekConfig} />
 
-                    <div className="apple-card rounded-[16px] p-5">
+                    <div className="rounded-2xl border border-[var(--chatgpt-border)] bg-[var(--chatgpt-sidebar-bg)] p-5">
                       <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-[17px] font-semibold text-[#1d1d1f]">Email workbook</h3>
+                        <h3 className="text-[16px] font-semibold text-[var(--chatgpt-text)]">Email workbook</h3>
                         <Badge variant={schedule.email_sent_at ? "success" : "muted"}>
                           {schedule.email_sent_at ? "Sent" : "Not sent"}
                         </Badge>
@@ -653,21 +804,21 @@ export function ChatUI() {
                         {schedule.excel_url && (
                           <a
                             href={`/api/history/${schedule.schedule_id}/artifacts/schedule_output.xlsx`}
-                            className="inline-flex h-9 items-center rounded-[10px] bg-black/[0.04] px-3.5 text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-black/[0.07]"
+                            className="inline-flex h-9 items-center rounded-lg bg-[var(--chatgpt-hover)] px-3.5 text-[13px] font-medium text-[var(--chatgpt-text)] transition-colors hover:bg-[#ddd]"
                           >
                             Download workbook
                           </a>
                         )}
                         <a
                           href={`/history/${schedule.schedule_id}`}
-                          className="inline-flex h-9 items-center rounded-[10px] bg-black/[0.04] px-3.5 text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-black/[0.07]"
+                          className="inline-flex h-9 items-center rounded-lg bg-[var(--chatgpt-hover)] px-3.5 text-[13px] font-medium text-[var(--chatgpt-text)] transition-colors hover:bg-[#ddd]"
                         >
                           View details
                         </a>
                       </div>
 
                       {emailStatus && (
-                        <p className="mt-3 text-[13px] text-[#86868b]">{emailStatus}</p>
+                        <p className="mt-3 text-[13px] text-[var(--chatgpt-text-secondary)]">{emailStatus}</p>
                       )}
                     </div>
                   </>
@@ -678,61 +829,15 @@ export function ChatUI() {
             </div>
 
             {/* Sticky input bar */}
-            <div className="sticky bottom-0 mx-auto w-full max-w-[720px] pb-1 pt-3">
-              <div className="apple-card rounded-[20px] px-4 py-3">
-                {/* Text input */}
-                <textarea
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      if (draft.trim() && !pendingReply) void submitUserMessage(draft);
-                    }
-                  }}
-                  placeholder="Message..."
-                  rows={1}
-                  className="max-h-[120px] min-h-[36px] w-full resize-none bg-transparent text-[16px] leading-relaxed text-[#1d1d1f] outline-none placeholder:text-[#c7c7cc]"
-                />
-
-                {/* Buttons — bottom-right */}
-                <div className="mt-2 flex items-center justify-end gap-2">
-                  {/* Voice button */}
-                  <VoiceInput
-                    autoStart={voiceAutoStart}
-                    onRecordingStateChange={({ isRecording, isTranscribing }) => {
-                      setVoiceState({ isRecording, isTranscribing });
-                      if (!isRecording && !isTranscribing) setVoiceAutoStart(false);
-                    }}
-                    onTranscriptPreview={setTranscriptPreview}
-                    onError={setError}
-                    onTranscript={async (text) => {
-                      setVoiceAutoStart(false);
-                      await submitUserMessage(text);
-                    }}
-                  />
-
-                  {/* Send button */}
-                  <button
-                    type="button"
-                    onClick={() => void submitUserMessage(draft)}
-                    disabled={pendingReply || !draft.trim()}
-                    className={cn(
-                      "flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full transition-all",
-                      draft.trim() && !pendingReply
-                        ? "bg-[hsl(var(--primary))] text-white shadow-[0_2px_8px_rgba(0,122,255,0.3)]"
-                        : "bg-[#e8e8ed] text-[#c7c7cc]",
-                    )}
-                    aria-label="Send"
-                  >
-                    {pendingReply ? (
-                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
-                    )}
-                  </button>
-                </div>
-              </div>
+            <div className="sticky bottom-0 mx-auto w-full max-w-[720px] bg-white pb-1 pt-3">
+              <ChatInputBar
+                draft={draft}
+                onDraftChange={setDraft}
+                onSend={() => void submitUserMessage(draft)}
+                onStartVoice={startVoiceFlow}
+                disabled={pendingReply}
+                placeholder="Message"
+              />
             </div>
           </div>
         </div>
