@@ -232,24 +232,24 @@ export function VoiceInput({
     );
   }
 
-  /* ─── Inline variant (compact) ─── */
+  /* ─── Inline variant (compact, matches send button size) ─── */
   return (
     <button
       type="button"
       disabled={disabled || isTranscribing}
       onClick={isRecording ? stopRecording : () => void startRecording()}
       className={cn(
-        "flex h-[36px] w-[36px] flex-shrink-0 items-center justify-center rounded-full transition-all",
+        "flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full transition-all",
         isRecording
           ? "bg-[hsl(var(--danger))] text-white"
-          : "text-[#86868b] hover:bg-black/5 active:bg-black/8",
+          : "bg-[#f0f0f2] text-[#86868b] hover:bg-[#e4e4e7] active:bg-[#dadadd]",
       )}
       aria-label={isRecording ? "Stop recording" : "Voice input"}
     >
       {isRecording ? (
         <Square className="h-3.5 w-3.5" fill="currentColor" />
       ) : (
-        <Mic className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        <Mic className="h-4 w-4" strokeWidth={2} />
       )}
     </button>
   );

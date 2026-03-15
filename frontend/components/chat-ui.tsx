@@ -205,16 +205,16 @@ function LandingView({
             className="w-full resize-none bg-transparent px-1 py-1 text-[16px] leading-relaxed text-[#1d1d1f] outline-none placeholder:text-[#c7c7cc] md:text-[17px]"
           />
 
-          {/* Actions */}
-          <div className="mt-3 flex items-center justify-between">
+          {/* Actions — bottom-right */}
+          <div className="mt-3 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onStartVoice}
               disabled={disabled}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-black/5 active:bg-black/8 disabled:opacity-40"
+              className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#f0f0f2] text-[#86868b] transition-colors hover:bg-[#e4e4e7] active:bg-[#dadadd] disabled:opacity-40"
               aria-label="Voice input"
             >
-              <Mic className="h-5 w-5" strokeWidth={1.8} />
+              <Mic className="h-4 w-4" strokeWidth={2} />
             </button>
 
             <button
@@ -550,7 +550,7 @@ export function ChatUI() {
         />
       ) : (
         /* ─── Chat view ────────────────────────────────────── */
-        <div className="flex min-h-full flex-col pb-4">
+        <div className="flex min-h-full flex-col pb-[max(env(safe-area-inset-bottom,16px),16px)]">
           <TopBar onOpenMenu={() => setMobileMenuOpen(true)} />
 
           <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col pt-2 md:pt-4">
@@ -679,22 +679,7 @@ export function ChatUI() {
 
             {/* Sticky input bar */}
             <div className="sticky bottom-0 mx-auto w-full max-w-[720px] pb-1 pt-3">
-              <div className="apple-card flex items-end gap-2.5 rounded-[20px] px-3.5 py-3">
-                {/* Voice button */}
-                <VoiceInput
-                  autoStart={voiceAutoStart}
-                  onRecordingStateChange={({ isRecording, isTranscribing }) => {
-                    setVoiceState({ isRecording, isTranscribing });
-                    if (!isRecording && !isTranscribing) setVoiceAutoStart(false);
-                  }}
-                  onTranscriptPreview={setTranscriptPreview}
-                  onError={setError}
-                  onTranscript={async (text) => {
-                    setVoiceAutoStart(false);
-                    await submitUserMessage(text);
-                  }}
-                />
-
+              <div className="apple-card rounded-[20px] px-4 py-3">
                 {/* Text input */}
                 <textarea
                   value={draft}
@@ -707,28 +692,46 @@ export function ChatUI() {
                   }}
                   placeholder="Message..."
                   rows={1}
-                  className="max-h-[120px] min-h-[36px] flex-1 resize-none bg-transparent py-1.5 text-[16px] leading-relaxed text-[#1d1d1f] outline-none placeholder:text-[#c7c7cc]"
+                  className="max-h-[120px] min-h-[36px] w-full resize-none bg-transparent text-[16px] leading-relaxed text-[#1d1d1f] outline-none placeholder:text-[#c7c7cc]"
                 />
 
-                {/* Send button */}
-                <button
-                  type="button"
-                  onClick={() => void submitUserMessage(draft)}
-                  disabled={pendingReply || !draft.trim()}
-                  className={cn(
-                    "mb-0.5 flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-full transition-all",
-                    draft.trim() && !pendingReply
-                      ? "bg-[hsl(var(--primary))] text-white"
-                      : "bg-[#e8e8ed] text-[#c7c7cc]",
-                  )}
-                  aria-label="Send"
-                >
-                  {pendingReply ? (
-                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  )}
-                </button>
+                {/* Buttons — bottom-right */}
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  {/* Voice button */}
+                  <VoiceInput
+                    autoStart={voiceAutoStart}
+                    onRecordingStateChange={({ isRecording, isTranscribing }) => {
+                      setVoiceState({ isRecording, isTranscribing });
+                      if (!isRecording && !isTranscribing) setVoiceAutoStart(false);
+                    }}
+                    onTranscriptPreview={setTranscriptPreview}
+                    onError={setError}
+                    onTranscript={async (text) => {
+                      setVoiceAutoStart(false);
+                      await submitUserMessage(text);
+                    }}
+                  />
+
+                  {/* Send button */}
+                  <button
+                    type="button"
+                    onClick={() => void submitUserMessage(draft)}
+                    disabled={pendingReply || !draft.trim()}
+                    className={cn(
+                      "flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full transition-all",
+                      draft.trim() && !pendingReply
+                        ? "bg-[hsl(var(--primary))] text-white shadow-[0_2px_8px_rgba(0,122,255,0.3)]"
+                        : "bg-[#e8e8ed] text-[#c7c7cc]",
+                    )}
+                    aria-label="Send"
+                  >
+                    {pendingReply ? (
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
