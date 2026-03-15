@@ -38,6 +38,7 @@ export function VoiceInput({
 }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [bars, setBars] = useState<number[]>([0.18, 0.24, 0.28, 0.22, 0.2, 0.16]);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -92,10 +93,23 @@ export function VoiceInput({
     analyser.fftSize = 64;
     audioContextRef.current = audioContext;
 
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const tick = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const next = Array.from({ length: 6 }, (_, index) => {
+        const slice = dataArray.slice(index * 5, index * 5 + 5);
+        const avg = slice.reduce((sum, value) => sum + value, 0) / Math.max(slice.length, 1);
+        return Math.max(0.16, avg / 255);
+      });
+      setBars(next);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
     const SpeechRecognitionCtor =
       typeof window !== "undefined"
         ? ((window as Window & { SpeechRecognition?: new () => BrowserSpeechRecognition; webkitSpeechRecognition?: new () => BrowserSpeechRecognition })
-              .SpeechRecognition ??
+            .SpeechRecognition ??
             (window as Window & { webkitSpeechRecognition?: new () => BrowserSpeechRecognition }).webkitSpeechRecognition)
         : undefined;
 
@@ -130,6 +144,7 @@ export function VoiceInput({
     recorder.onstop = async () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       recognitionRef.current?.stop();
+      setBars([0.18, 0.24, 0.28, 0.22, 0.2, 0.16]);
       stream.getTracks().forEach((track) => track.stop());
       await audioContext.close().catch(() => undefined);
       const audioBlob = new Blob(chunksRef.current, { type: mimeType });
@@ -165,7 +180,7 @@ export function VoiceInput({
     setIsRecording(false);
   }
 
-  /* ─── Fullscreen variant — ChatGPT voice orb ─── */
+  /* ─── Fullscreen variant — dark background with blue orb ─── */
   if (variant === "fullscreen") {
     return (
       <div className="flex flex-col items-center justify-center">
@@ -178,42 +193,47 @@ export function VoiceInput({
         >
           <div
             className={cn(
-              "voice-orb transition-all duration-500",
-              isRecording && "active",
+              "voice-orb",
+              isRecording && "recording",
               isTranscribing && "transcribing",
             )}
           />
-          {/* Inner icon overlay */}
+          {/* Inner icon overlay — only visible on hover or when active */}
           <div className="absolute inset-0 flex items-center justify-center">
             {isRecording ? (
-              <Square className="h-8 w-8 text-white/90 drop-shadow-lg" fill="currentColor" />
+              <Square className="h-8 w-8 text-white/80 drop-shadow-lg" fill="currentColor" />
             ) : isTranscribing ? (
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white/90" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white/80" />
             ) : (
-              <Mic className="h-8 w-8 text-white/90 drop-shadow-lg opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.6} />
+              <Mic className="h-8 w-8 text-white/70 opacity-0 transition-opacity group-hover:opacity-100 drop-shadow-lg" strokeWidth={1.6} />
             )}
           </div>
         </button>
 
         {/* Status text */}
-        <p className="mt-8 text-[18px] font-medium text-white/80">
+        <p className="mt-8 text-[20px] font-semibold tracking-[-0.02em] text-white/80">
           {isRecording ? "Listening\u2026" : isTranscribing ? "Transcribing\u2026" : "Tap to speak"}
+        </p>
+        <p className="mt-1.5 text-center text-[15px] text-white/40">
+          {isRecording
+            ? "Tap the orb when done."
+            : "We\u2019ll turn your voice into schedule instructions."}
         </p>
       </div>
     );
   }
 
-  /* ─── Inline variant (compact button) ─── */
+  /* ─── Inline variant (compact, matches send button size) ─── */
   return (
     <button
       type="button"
       disabled={disabled || isTranscribing}
       onClick={isRecording ? stopRecording : () => void startRecording()}
       className={cn(
-        "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-all",
+        "flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full transition-all",
         isRecording
-          ? "bg-red-500 text-white"
-          : "text-[var(--chatgpt-text-secondary)] hover:bg-[var(--chatgpt-hover)]",
+          ? "bg-[hsl(var(--danger))] text-white"
+          : "bg-[#f0f0f2] text-[#86868b] hover:bg-[#e4e4e7] active:bg-[#dadadd]",
       )}
       aria-label={isRecording ? "Stop recording" : "Voice input"}
     >
