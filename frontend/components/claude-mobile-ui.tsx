@@ -18,27 +18,9 @@ function parseBold(text: string) {
 }
 
 /* ── SVG icons ─────────────────────────────────────────────────── */
-function AnthropicAsterisk() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      {Array.from({ length: 8 }).map((_, i) => {
-        const r = ((i * 360) / 8) * (Math.PI / 180);
-        return (
-          <line
-            key={i}
-            x1={24 + 5 * Math.cos(r)} y1={24 + 5 * Math.sin(r)}
-            x2={24 + 20 * Math.cos(r)} y2={24 + 20 * Math.sin(r)}
-            stroke="#C96A4A" strokeWidth="3.2" strokeLinecap="round"
-          />
-        );
-      })}
-    </svg>
-  );
-}
-
 function HamburgerIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
       <line x1="3" y1="6" x2="21" y2="6" />
       <line x1="3" y1="12" x2="21" y2="12" />
       <line x1="3" y1="18" x2="21" y2="18" />
@@ -61,7 +43,7 @@ function ChevronDownTitleIcon() {
 
 function GhostIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M9 10h.01M15 10h.01" />
       <path d="M12 2a8 8 0 0 1 8 8v10l-4-2-2 2-2-2-2 2-2-2-4 2V10a8 8 0 0 1 8-8z" />
     </svg>
@@ -205,6 +187,18 @@ export function ClaudeMobileUI() {
   const isConversation = messages.length > 0;
   const isActiveInput  = isConversation || inputFocused;
 
+  // Compute next Monday's date at render time
+  const nextMonday = (() => {
+    const d = new Date();
+    const day = d.getDay(); // 0=Sun, 1=Mon, …
+    const daysUntilMonday = day === 1 ? 7 : (8 - day) % 7;
+    d.setDate(d.getDate() + daysUntilMonday);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  })();
+
   /* scroll helpers */
   const scrollToBottom = useCallback(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -274,6 +268,71 @@ export function ClaudeMobileUI() {
         .claude-textarea::placeholder { color: #AAAAAA; }
         .claude-pill-input::placeholder { color: #9B9B9B; }
 
+        /* ── Input bar: idle (pill) ── */
+        .cl-iw {
+          position: sticky;
+          bottom: 0;
+          margin: 0 12px 12px;
+          z-index: 10;
+        }
+        .cl-ic {
+          background: #FFFFFF;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+          border-radius: 999px;
+          max-height: 60px;
+          transition: border-radius 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                      max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cl-ir {
+          display: flex;
+          align-items: center;
+          padding: 10px 8px 10px 16px;
+          gap: 8px;
+          transition: opacity 0.15s ease, max-height 0.25s ease, padding 0.25s ease;
+          max-height: 60px;
+          overflow: hidden;
+        }
+        .cl-ie {
+          max-height: 0;
+          overflow: hidden;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.2s ease, max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cl-ia {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 10px;
+        }
+
+        /* ── Input bar: active / expanded ── */
+        .cl-iw-on {
+          position: fixed;
+          bottom: 12px;
+          left: 12px;
+          right: 12px;
+          margin: 0;
+        }
+        .cl-iw-on .cl-ic {
+          border-radius: 20px;
+          max-height: 300px;
+          border-top: 1px solid #E5E0D8;
+        }
+        .cl-iw-on .cl-ir {
+          max-height: 0;
+          padding: 0;
+          opacity: 0;
+          pointer-events: none;
+        }
+        .cl-iw-on .cl-ie {
+          max-height: 240px;
+          opacity: 1;
+          pointer-events: auto;
+          padding: 14px 16px;
+        }
+
         /* ── Desktop: phone-frame centered on white page ── */
         @media (min-width: 768px) {
           body { background-color: #FFFFFF; }
@@ -291,27 +350,23 @@ export function ClaudeMobileUI() {
             left: 50% !important;
             transform: translateX(-50%) !important;
             width: 448px !important;
-            padding-top: 16px !important;
-            z-index: 30;
-            background-color: #F4EFE6;
+            padding: 10px 16px !important;
+            z-index: 100 !important;
+            background-color: #F9F6F1 !important;
           }
 
-          /* push content below fixed nav */
-          .cl-empty  { padding-top: 80px; }
-          .cl-msgs   { padding-top: 80px !important; }
+          .cl-empty { padding-top: 60px; }
+          .cl-msgs  { padding-top: 60px !important; }
 
-          .cl-input-pill {
+          /* both idle and active anchor to column center */
+          .cl-iw,
+          .cl-iw-on {
             position: fixed !important;
-            bottom: 0 !important;
+            bottom: 16px !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
-            width: 448px !important;
-          }
-
-          .cl-input-rect {
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            width: 448px !important;
+            width: calc(448px - 32px) !important;
+            margin: 0 !important;
             right: auto !important;
           }
         }
@@ -323,7 +378,7 @@ export function ClaudeMobileUI() {
           width: "100vw",
           height: isConversation ? "100vh" : undefined,
           minHeight: "100vh",
-          backgroundColor: "#F4EFE6",
+          backgroundColor: "#F9F6F1",
           display: "flex",
           flexDirection: "column",
           fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
@@ -343,20 +398,29 @@ export function ClaudeMobileUI() {
             paddingTop: 52,
             paddingLeft: 16,
             paddingRight: 16,
-            paddingBottom: 8,
-            backgroundColor: "#F4EFE6",
+            paddingBottom: 10,
+            backgroundColor: "#F9F6F1",
             flexShrink: 0,
           }}
         >
-          <button type="button" aria-label="Menu" style={{ ...NAV_BTN, backgroundColor: "#EFEFEF" }}>
+          <button
+            type="button"
+            aria-label="Menu"
+            style={{
+              width: 40, height: 40, borderRadius: "50%",
+              backgroundColor: "#EFEFEF", border: "none", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+            }}
+          >
             <HamburgerIcon />
           </button>
 
           <div style={{ textAlign: "center", flex: 1, margin: "0 8px" }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "#2D2D2D", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-              Sonnet 4.6<ChevronDownTitleIcon />
+            <div style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+              Select Week<ChevronDownTitleIcon />
             </div>
-            <div style={{ fontSize: 12, color: "#9B9B9B", marginTop: 1 }}>Extended</div>
+            <div style={{ fontSize: 12, color: "#999", fontWeight: 400, marginTop: 1 }}>{nextMonday}</div>
           </div>
 
           {isConversation ? (
@@ -364,12 +428,26 @@ export function ClaudeMobileUI() {
               type="button"
               aria-label="New conversation"
               onClick={resetConversation}
-              style={{ ...NAV_BTN, backgroundColor: "#C96A4A" }}
+              style={{
+                width: 40, height: 40, borderRadius: "50%",
+                backgroundColor: "#C96A4A", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+              }}
             >
               <PlusWhiteIcon />
             </button>
           ) : (
-            <button type="button" aria-label="Incognito" style={{ ...NAV_BTN, backgroundColor: "#EFEFEF", color: "#2D2D2D" }}>
+            <button
+              type="button"
+              aria-label="Incognito"
+              style={{
+                width: 40, height: 40, borderRadius: "50%",
+                backgroundColor: "#EFEFEF", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, color: "#444", boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+              }}
+            >
               <GhostIcon />
             </button>
           )}
@@ -390,7 +468,6 @@ export function ClaudeMobileUI() {
               paddingRight: 24,
             }}
           >
-            <AnthropicAsterisk />
             <h1
               style={{
                 fontFamily: "'Tiempos Text', Georgia, 'Times New Roman', serif",
@@ -400,12 +477,12 @@ export function ClaudeMobileUI() {
                 textAlign: "center",
                 lineHeight: 1.15,
                 maxWidth: 280,
-                marginTop: 20,
+                marginTop: 0,
                 marginBottom: 0,
                 letterSpacing: "-0.01em",
               }}
             >
-              How can I help you this morning?
+              Hi chef,<br />What&rsquo;s different in the kitchen this week?
             </h1>
           </div>
         )}
@@ -469,35 +546,15 @@ export function ClaudeMobileUI() {
           </button>
         )}
 
-        {/* ── Input: pill (empty, unfocused) ───────────────────── */}
-        {!isActiveInput && (
-          <div
-            className="cl-input-pill"
-            style={{
-              position: "sticky",
-              bottom: 0,
-              backgroundColor: "#F4EFE6",
-              padding: "8px 16px 28px",
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderRadius: 999,
-                display: "flex",
-                alignItems: "center",
-                paddingLeft: 16,
-                paddingRight: 8,
-                paddingTop: 10,
-                paddingBottom: 10,
-                gap: 8,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-              }}
-            >
+        {/* ── Unified input bar ────────────────────────────────── */}
+        <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}>
+          <div className="cl-ic">
+
+            {/* Pill row — visible when idle */}
+            <div className="cl-ir">
               <button type="button" aria-label="Attach" style={BTN}>
                 <PlusGrayIcon size={22} />
               </button>
-
               <input
                 className="claude-pill-input"
                 type="text"
@@ -505,109 +562,56 @@ export function ClaudeMobileUI() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
                 onFocus={() => setInputFocused(true)}
                 onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") void sendMessage(); }}
-                placeholder="Chat with Claude"
+                placeholder="Chat with scheduled.ai"
                 style={{
-                  flex: 1,
-                  border: "none",
-                  background: "transparent",
-                  outline: "none",
-                  fontSize: 16,
-                  color: "#2D2D2D",
-                  fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
-                  minWidth: 0,
+                  flex: 1, border: "none", background: "transparent", outline: "none",
+                  fontSize: 16, color: "#2D2D2D",
+                  fontFamily: "system-ui, -apple-system, 'Inter', sans-serif", minWidth: 0,
                 }}
               />
-
               <button type="button" aria-label="Voice input" style={BTN}>
                 <MicIcon />
               </button>
-
               <button
-                type="button"
-                aria-label="Send"
-                onClick={() => void sendMessage()}
-                style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#000000" }}
+                type="button" aria-label="Send" onClick={() => void sendMessage()}
+                style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#000" }}
               >
                 <WaveformIcon />
               </button>
             </div>
-          </div>
-        )}
 
-        {/* ── Input: rectangle (active / conversation) ─────────── */}
-        {isActiveInput && (
-          <div
-            className="cl-input-rect"
-            style={{
-              position: "fixed",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              backgroundColor: "#F4EFE6",
-              borderTop: "1px solid #E5E0D8",
-              paddingBottom: "env(safe-area-inset-bottom, 0px)",
-              zIndex: 10,
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderRadius: 16,
-                padding: "12px 16px",
-                margin: 0,
-              }}
-            >
+            {/* Expanded area — visible when active */}
+            <div className="cl-ie">
               <textarea
                 ref={textareaRef}
                 className="claude-textarea"
                 value={inputValue}
                 rows={1}
-                placeholder="Reply to Claude"
+                placeholder="Reply to scheduled.ai"
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => { setInputValue(e.target.value); autoResize(); }}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => { if (!isConversation && !pending) setInputFocused(false); }}
                 onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void sendMessage();
-                  }
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); }
                 }}
                 style={{
-                  width: "100%",
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  resize: "none",
-                  fontSize: 16,
-                  color: "#2D2D2D",
+                  width: "100%", border: "none", outline: "none", background: "transparent",
+                  resize: "none", fontSize: 16, color: "#2D2D2D",
                   fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
-                  minHeight: 48,
-                  lineHeight: 1.5,
-                  boxSizing: "border-box",
-                  display: "block",
+                  minHeight: 48, maxHeight: 160, overflowY: "auto",
+                  lineHeight: 1.5, boxSizing: "border-box", display: "block",
                 }}
               />
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginTop: 4,
-                }}
-              >
+              <div className="cl-ia">
                 <button type="button" aria-label="Attach" style={BTN}>
                   <PlusGrayIcon color="#888" size={22} />
                 </button>
-
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button type="button" aria-label="Voice input" style={BTN}>
                     <MicIcon color="#888" />
                   </button>
                   <button
-                    type="button"
-                    aria-label="Send"
-                    onClick={() => void sendMessage()}
+                    type="button" aria-label="Send" onClick={() => void sendMessage()}
                     style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#1A1A1A" }}
                   >
                     <WaveformIcon />
@@ -615,8 +619,9 @@ export function ClaudeMobileUI() {
                 </div>
               </div>
             </div>
+
           </div>
-        )}
+        </div>
       </div>
     </>
   );
