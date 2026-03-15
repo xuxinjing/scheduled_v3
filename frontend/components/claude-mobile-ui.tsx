@@ -18,24 +18,6 @@ function parseBold(text: string) {
 }
 
 /* ── SVG icons ─────────────────────────────────────────────────── */
-function AnthropicAsterisk() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      {Array.from({ length: 8 }).map((_, i) => {
-        const r = ((i * 360) / 8) * (Math.PI / 180);
-        return (
-          <line
-            key={i}
-            x1={24 + 5 * Math.cos(r)} y1={24 + 5 * Math.sin(r)}
-            x2={24 + 20 * Math.cos(r)} y2={24 + 20 * Math.sin(r)}
-            stroke="#C96A4A" strokeWidth="3.2" strokeLinecap="round"
-          />
-        );
-      })}
-    </svg>
-  );
-}
-
 function HamburgerIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -486,7 +468,6 @@ export function ClaudeMobileUI() {
               paddingRight: 24,
             }}
           >
-            <AnthropicAsterisk />
             <h1
               style={{
                 fontFamily: "'Tiempos Text', Georgia, 'Times New Roman', serif",
@@ -496,12 +477,12 @@ export function ClaudeMobileUI() {
                 textAlign: "center",
                 lineHeight: 1.15,
                 maxWidth: 280,
-                marginTop: 20,
+                marginTop: 0,
                 marginBottom: 0,
                 letterSpacing: "-0.01em",
               }}
             >
-              What&rsquo;s different in the kitchen this week?
+              Hi chef,<br />What&rsquo;s different in the kitchen this week?
             </h1>
           </div>
         )}
