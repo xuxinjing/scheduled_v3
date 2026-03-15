@@ -187,17 +187,37 @@ export function ClaudeMobileUI() {
   const isConversation = messages.length > 0;
   const isActiveInput  = isConversation || inputFocused;
 
-  // Compute next Monday's date at render time
-  const nextMonday = (() => {
-    const d = new Date();
-    const day = d.getDay(); // 0=Sun, 1=Mon, …
-    const daysUntilMonday = day === 1 ? 7 : (8 - day) % 7;
-    d.setDate(d.getDate() + daysUntilMonday);
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${mm}/${dd}/${yyyy}`;
+  const [weekOpen, setWeekOpen]               = useState(false);
+  const [selectedWeekIdx, setSelectedWeekIdx] = useState(1); // default: next Monday
+  const [ddCoords, setDdCoords]               = useState({ top: 0, left: 0 });
+  const weekTriggerRef = useRef<HTMLDivElement>(null);
+
+  // 8 weeks: current week's Monday + 7 future weeks
+  const weekOptions: string[] = (() => {
+    const weeks: string[] = [];
+    const today = new Date();
+    const day = today.getDay(); // 0=Sun …
+    const daysToCurrentMonday = day === 0 ? -6 : 1 - day;
+    const currentMonday = new Date(today);
+    currentMonday.setDate(today.getDate() + daysToCurrentMonday);
+    for (let i = 0; i < 8; i++) {
+      const monday = new Date(currentMonday);
+      monday.setDate(currentMonday.getDate() + i * 7);
+      const mm   = String(monday.getMonth() + 1).padStart(2, "0");
+      const dd   = String(monday.getDate()).padStart(2, "0");
+      const yyyy = monday.getFullYear();
+      weeks.push(`${mm}/${dd}/${yyyy}`);
+    }
+    return weeks;
   })();
+
+  function toggleWeek() {
+    if (!weekOpen && weekTriggerRef.current) {
+      const rect = weekTriggerRef.current.getBoundingClientRect();
+      setDdCoords({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+    }
+    setWeekOpen((v: boolean) => !v);
+  }
 
   /* scroll helpers */
   const scrollToBottom = useCallback(() => {
@@ -333,6 +353,43 @@ export function ClaudeMobileUI() {
           padding: 14px 16px;
         }
 
+        /* ── Week dropdown ── */
+        .wk-dd {
+          width: 220px;
+          background: #FFFFFF;
+          border-radius: 16px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+          overflow: hidden;
+          z-index: 400;
+          opacity: 0;
+          transform: translateX(-50%) translateY(-6px);
+          pointer-events: none;
+          transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+        }
+        .wk-dd.open {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+          pointer-events: auto;
+        }
+        .wk-row {
+          padding: 12px 20px;
+          font-size: 14px;
+          color: #2D2D2D;
+          font-family: system-ui, -apple-system, 'Inter', sans-serif;
+          cursor: pointer;
+          transition: background 0.15s ease;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          box-sizing: border-box;
+        }
+        .wk-row:hover { background: #F4EFE6; }
+        .wk-row.sel {
+          background: #F4EFE6;
+          font-weight: 600;
+          color: #1A1A1A;
+        }
+
         /* ── Desktop: phone-frame centered on white page ── */
         @media (min-width: 768px) {
           body { background-color: #FFFFFF; }
@@ -351,7 +408,7 @@ export function ClaudeMobileUI() {
             transform: translateX(-50%) !important;
             width: 448px !important;
             padding: 10px 16px !important;
-            z-index: 100 !important;
+            z-index: 300 !important;
             background-color: #F9F6F1 !important;
           }
 
@@ -371,6 +428,33 @@ export function ClaudeMobileUI() {
           }
         }
       `}</style>
+
+      {/* ── Week dropdown backdrop ─────────────────────────────── */}
+      {weekOpen && (
+        <div
+          onClick={() => setWeekOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 199, background: "transparent" }}
+        />
+      )}
+
+      {/* ── Week dropdown ──────────────────────────────────────── */}
+      <div
+        className={`wk-dd${weekOpen ? " open" : ""}`}
+        style={{ position: "fixed", top: ddCoords.top, left: ddCoords.left }}
+      >
+        {weekOptions.map((week, idx) => (
+          <div
+            key={week}
+            className={`wk-row${idx === selectedWeekIdx ? " sel" : ""}`}
+            onClick={() => { setSelectedWeekIdx(idx); setWeekOpen(false); }}
+          >
+            <span>{"Week of " + week}</span>
+            {idx === selectedWeekIdx && (
+              <span style={{ color: "#C96A4A", fontSize: 8, lineHeight: 1 }}>●</span>
+            )}
+          </div>
+        ))}
+      </div>
 
       <div
         className="cl-col"
@@ -401,6 +485,8 @@ export function ClaudeMobileUI() {
             paddingBottom: 10,
             backgroundColor: "#F9F6F1",
             flexShrink: 0,
+            position: "relative",
+            zIndex: 300,
           }}
         >
           <button
@@ -416,11 +502,15 @@ export function ClaudeMobileUI() {
             <HamburgerIcon />
           </button>
 
-          <div style={{ textAlign: "center", flex: 1, margin: "0 8px" }}>
+          <div
+            ref={weekTriggerRef}
+            onClick={toggleWeek}
+            style={{ textAlign: "center", flex: 1, margin: "0 8px", cursor: "pointer", userSelect: "none" }}
+          >
             <div style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
               Select Week<ChevronDownTitleIcon />
             </div>
-            <div style={{ fontSize: 12, color: "#999", fontWeight: 400, marginTop: 1 }}>{nextMonday}</div>
+            <div style={{ fontSize: 12, color: "#999", fontWeight: 400, marginTop: 1 }}>{weekOptions[selectedWeekIdx]}</div>
           </div>
 
           {isConversation ? (
