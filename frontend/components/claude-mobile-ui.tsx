@@ -451,6 +451,12 @@ export function ClaudeMobileUI() {
             box-shadow: 0 0 40px rgba(0,0,0,0.08);
           }
 
+          .cl-nav-bg {
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 448px !important;
+          }
+
           .cl-nav {
             position: fixed !important;
             top: 0 !important;
