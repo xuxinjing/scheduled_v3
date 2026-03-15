@@ -1,5 +1,5 @@
-import { ChatUI } from "@/components/chat-ui";
+import { ClaudeMobileUI } from "@/components/claude-mobile-ui";
 
 export default function HomePage() {
-  return <ChatUI />;
+  return <ClaudeMobileUI />;
 }
