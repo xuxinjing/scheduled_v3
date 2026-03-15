@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronRight, LoaderCircle, Menu, MessageSquarePlus, Mic, Send, X } from "lucide-react";
+import { ArrowUp, ChevronRight, LoaderCircle, Menu, Mic, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { ReasoningStream } from "@/components/reasoning-stream";
@@ -9,7 +9,6 @@ import { VoiceInput } from "@/components/voice-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import type { ChatMessage, ChatResponse, ReasoningEvent, ScheduleRun, WeekConfig } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +42,7 @@ function buildConversationSummary(messages: ChatMessage[]) {
     .join("\n");
 }
 
+/* ─── Mobile drawer ───────────────────────────────────────────── */
 function MobileDrawer({
   open,
   onClose,
@@ -54,68 +54,82 @@ function MobileDrawer({
 }) {
   return (
     <>
+      {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-[#111827]/56 backdrop-blur-[2px] transition-opacity md:hidden",
+          "fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity duration-300 md:hidden",
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
         )}
         onClick={onClose}
       />
+
+      {/* Panel */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-full w-[84%] max-w-[320px] border-r border-white/8 bg-[#202123] px-4 pb-5 pt-6 text-white shadow-[0_24px_60px_rgba(0,0,0,0.38)] transition-transform duration-300 md:hidden",
+          "fixed left-0 top-0 z-50 flex h-full w-[82%] max-w-[320px] flex-col bg-[#f5f5f7] pb-5 pt-[env(safe-area-inset-top,0px)] shadow-[4px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:hidden",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold tracking-[0.08em] text-white/92">Chats</p>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pb-2 pt-5">
+          <p className="text-[17px] font-semibold text-[#1d1d1f]">Chats</p>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-white/72 transition hover:bg-white/8 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-[#86868b] transition-colors active:bg-black/10"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" strokeWidth={2} />
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            onNewChat();
-            onClose();
-          }}
-          className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-left transition hover:bg-white/12"
-        >
-          <MessageSquarePlus className="h-5 w-5 text-[#8ab4ff]" />
-          <span className="text-sm font-medium text-white">New chat</span>
-        </button>
-
-        <p className="mt-6 px-2 text-[11px] font-medium uppercase tracking-[0.16em] text-white/40">Recent</p>
-
-        <div className="mt-3 space-y-1.5">
-          {fakeConversations.map((conversation) => (
-            <button
-              key={conversation.title}
-              type="button"
-              onClick={onClose}
-              className={cn(
-                "flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition",
-                conversation.active ? "bg-white/10" : "hover:bg-white/6",
-              )}
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white/92">{conversation.title}</p>
-                <p className="mt-1 truncate text-xs text-white/48">{conversation.preview}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-white/28" />
-            </button>
-          ))}
+        {/* New chat */}
+        <div className="px-4 pt-3">
+          <button
+            type="button"
+            onClick={() => {
+              onNewChat();
+              onClose();
+            }}
+            className="flex w-full items-center gap-3 rounded-[12px] bg-white px-3.5 py-2.5 text-left shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition-colors active:bg-[#f0f0f2]"
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-white">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </div>
+            <span className="text-[15px] font-medium text-[#1d1d1f]">New Chat</span>
+          </button>
         </div>
 
-        <div className="mt-auto pt-6">
-          <div className="rounded-2xl border border-white/8 bg-white/6 px-4 py-3">
-            <p className="text-sm font-medium text-white/88">Acquerello Scheduled</p>
-            <p className="mt-1 text-xs text-white/46">Kitchen scheduling workspace</p>
+        {/* Section label */}
+        <p className="mt-5 px-5 text-[12px] font-semibold text-[#86868b]">Recent</p>
+
+        {/* Conversations */}
+        <div className="mt-2 flex-1 overflow-y-auto px-3">
+          <div className="space-y-0.5">
+            {fakeConversations.map((conversation) => (
+              <button
+                key={conversation.title}
+                type="button"
+                onClick={onClose}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-left transition-colors",
+                  conversation.active ? "bg-black/[0.06]" : "active:bg-black/[0.04]",
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-medium text-[#1d1d1f]">{conversation.title}</p>
+                  <p className="mt-0.5 truncate text-[13px] text-[#86868b]">{conversation.preview}</p>
+                </div>
+                <ChevronRight className="ml-2 h-4 w-4 flex-shrink-0 text-[#c7c7cc]" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-auto px-5">
+          <div className="border-t border-black/5 pt-4">
+            <p className="text-[13px] font-medium text-[#1d1d1f]">Acquerello Scheduled</p>
+            <p className="text-[11px] text-[#86868b]">Kitchen scheduling workspace</p>
           </div>
         </div>
       </aside>
@@ -123,7 +137,8 @@ function MobileDrawer({
   );
 }
 
-function TopControls({
+/* ─── Top bar (mobile menu button) ────────────────────────────── */
+function TopBar({
   onOpenMenu,
   rightSlot,
 }: {
@@ -131,33 +146,22 @@ function TopControls({
   rightSlot?: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 pl-8 pr-6 pt-12 md:px-0 md:pt-6">
+    <div className="flex items-center justify-between px-1 pb-2 pt-[max(env(safe-area-inset-top,12px),12px)] md:px-0 md:pt-6">
       <button
         type="button"
         onClick={onOpenMenu}
-        className="flex h-11 w-11 items-center justify-center bg-transparent text-[#23345d] transition md:hidden"
+        className="flex h-10 w-10 items-center justify-center rounded-full text-[#1d1d1f] transition-colors active:bg-black/5 md:hidden"
         aria-label="Open navigation"
       >
-        <Menu className="h-7 w-7" strokeWidth={1.8} />
+        <Menu className="h-6 w-6" strokeWidth={1.5} />
       </button>
-
       <div className="flex-1" />
-
-      <div className="flex items-center gap-3">
-        {rightSlot ?? (
-          <button
-            type="button"
-            className="hidden h-11 w-11 items-center justify-center rounded-full text-[#334155] transition hover:bg-white/80 md:inline-flex"
-            aria-label="Notifications"
-          >
-            <Bell className="h-6 w-6" strokeWidth={1.8} />
-          </button>
-        )}
-      </div>
+      {rightSlot}
     </div>
   );
 }
 
+/* ─── Landing ─────────────────────────────────────────────────── */
 function LandingView({
   draft,
   onDraftChange,
@@ -173,50 +177,68 @@ function LandingView({
   disabled: boolean;
   onOpenMenu: () => void;
 }) {
-  return (
-    <div className="flex min-h-full flex-col justify-center pb-[30px]">
-      <TopControls onOpenMenu={onOpenMenu} />
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-      <div className="mx-auto mt-[7vh] flex w-full max-w-[940px] flex-col items-center px-[22px] md:mt-[14vh] md:px-6">
+  return (
+    <div className="flex min-h-full flex-col">
+      <TopBar onOpenMenu={onOpenMenu} />
+
+      <div className="mx-auto flex w-full max-w-[680px] flex-1 flex-col items-center justify-center px-2 pb-10">
+        {/* Title */}
         <div className="text-center">
-          <p className="brand-serif text-[30px] leading-none text-[#2f6ae6] md:text-[68px]">Acquerello Scheduled</p>
-          <h1 className="nav-title mt-6 text-[16px] leading-[1.5] text-[#101828] md:text-[34px]">
-            Ready to generate kitchen schedule?
+          <h1 className="brand-serif text-[32px] leading-tight text-[#1d1d1f] md:text-[48px]">
+            Acquerello Scheduled
           </h1>
+          <p className="mt-3 text-[17px] text-[#86868b] md:text-[20px]">
+            What&rsquo;s different this week?
+          </p>
         </div>
 
-        <div className="apple-panel mt-8 flex w-full max-w-[860px] flex-col rounded-[30px] px-5 pb-5 pt-5 md:mt-12 md:min-h-[350px] md:rounded-[32px] md:p-8">
-          <Textarea
-              value={draft}
-              onChange={(event) => onDraftChange(event.target.value)}
-            placeholder="Tell me what is different this week"
-            className="min-h-[150px] resize-none border-0 bg-transparent px-3 py-3 text-[17px] text-[#111827] shadow-none ring-0 placeholder:text-[#c4cbd6] focus:border-0 focus:ring-0 md:min-h-[220px] md:px-9 md:py-7 md:text-[22px]"
+        {/* Input card */}
+        <div className="apple-card mt-8 w-full rounded-[20px] p-4 md:mt-10">
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+            placeholder="Chef is off Tuesday, CDC returns Friday..."
+            rows={4}
+            className="w-full resize-none bg-transparent px-1 py-1 text-[16px] leading-relaxed text-[#1d1d1f] outline-none placeholder:text-[#c7c7cc] md:text-[17px]"
           />
 
-          <div className="mt-6 flex items-center justify-end gap-4 pr-2 pb-2 md:mt-14 md:gap-8 md:pr-6 md:pb-5">
-            <Button
+          {/* Actions */}
+          <div className="mt-3 flex items-center justify-between">
+            <button
               type="button"
-              size="icon"
-              variant="secondary"
               onClick={onStartVoice}
               disabled={disabled}
-              className="h-[58px] w-[58px] rounded-full border-[#dbe2ec] bg-[#e8eef8] text-[#0f172a] shadow-[0_8px_18px_rgba(15,23,42,0.08)] hover:bg-[#dde6f5] md:h-[78px] md:w-[78px]"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-black/5 active:bg-black/8 disabled:opacity-40"
+              aria-label="Voice input"
             >
-              <Mic className="h-7 w-7 md:h-8 md:w-8" strokeWidth={1.8} />
-            </Button>
-            <Button
+              <Mic className="h-5 w-5" strokeWidth={1.8} />
+            </button>
+
+            <button
               type="button"
               onClick={onSend}
               disabled={disabled || !draft.trim()}
-              className="h-[58px] min-w-[132px] rounded-full border-[#636a77] bg-[#636a77] px-5 text-[16px] font-medium text-white shadow-[0_10px_18px_rgba(15,23,42,0.12)] hover:border-[#565d69] hover:bg-[#565d69] md:h-[78px] md:min-w-[172px] md:px-8 md:text-[18px]"
+              className={cn(
+                "flex h-[34px] w-[34px] items-center justify-center rounded-full transition-all",
+                draft.trim()
+                  ? "bg-[hsl(var(--primary))] text-white shadow-[0_2px_8px_rgba(0,122,255,0.3)]"
+                  : "bg-[#e8e8ed] text-[#c7c7cc]",
+              )}
+              aria-label="Send"
             >
-              {disabled ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-              Send
-            </Button>
+              {disabled ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+              )}
+            </button>
           </div>
         </div>
 
-        <p className="mt-7 max-w-[700px] px-4 text-center text-[14px] leading-7 text-[#6b7280]">
+        <p className="mt-5 px-4 text-center text-[13px] leading-5 text-[#86868b]">
           Speak naturally about time off, service level changes, station coverage, or training goals.
         </p>
       </div>
@@ -224,6 +246,7 @@ function LandingView({
   );
 }
 
+/* ─── Voice capture ───────────────────────────────────────────── */
 function VoiceCaptureView({
   transcriptPreview,
   onOpenMenu,
@@ -244,21 +267,21 @@ function VoiceCaptureView({
   autoStart: boolean;
 }) {
   return (
-    <div className="flex min-h-full flex-col pb-8">
-      <TopControls
+    <div className="flex min-h-full flex-col">
+      <TopBar
         onOpenMenu={onOpenMenu}
         rightSlot={
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-[#334155] transition hover:bg-white/70 md:hidden"
+            className="text-[15px] font-medium text-[hsl(var(--primary))] transition-opacity active:opacity-60"
           >
-            Close
+            Done
           </button>
         }
       />
 
-      <div className="mx-auto flex w-full max-w-[920px] flex-1 flex-col items-center justify-center px-6 pb-12">
+      <div className="mx-auto flex w-full max-w-[680px] flex-1 flex-col items-center justify-center px-6 pb-16">
         <VoiceInput
           variant="fullscreen"
           autoStart={autoStart}
@@ -268,10 +291,11 @@ function VoiceCaptureView({
           onError={onError}
         />
 
-        <div className="apple-panel mt-10 min-h-[120px] w-full max-w-[720px] rounded-[30px] px-6 py-5 text-center">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-[#2563eb]">Live transcript</p>
-          <p className="mt-4 min-h-[48px] text-[20px] leading-8 text-[#111827]">
-            {transcriptPreview || "Start speaking about this week’s changes..."}
+        {/* Live transcript */}
+        <div className="apple-card mt-8 min-h-[80px] w-full max-w-[560px] rounded-[16px] px-5 py-4 text-center">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[#86868b]">Live transcript</p>
+          <p className="mt-3 text-[17px] leading-7 text-[#1d1d1f]">
+            {transcriptPreview || "Start speaking about this week\u2019s changes\u2026"}
           </p>
         </div>
       </div>
@@ -279,16 +303,17 @@ function VoiceCaptureView({
   );
 }
 
+/* ─── Message bubble ──────────────────────────────────────────── */
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isAssistant = message.role === "assistant";
   return (
     <div className={cn("flex w-full", isAssistant ? "justify-start" : "justify-end")}>
       <div
         className={cn(
-          "text-[15px] leading-7",
+          "text-[15px] leading-relaxed",
           isAssistant
-            ? "apple-panel w-full rounded-[30px] px-5 py-4 text-[#0f172a]"
-            : "max-w-[85%] rounded-[26px] bg-[#2f6ae6] px-5 py-3.5 text-white shadow-[0_12px_28px_rgba(47,106,230,0.18)] md:max-w-[70%]",
+            ? "apple-card w-full rounded-[16px] px-4 py-3.5 text-[#1d1d1f]"
+            : "max-w-[82%] rounded-[18px] bg-[hsl(var(--primary))] px-4 py-3 text-white md:max-w-[70%]",
         )}
       >
         {message.content}
@@ -297,6 +322,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
+/* ─── Main export ─────────────────────────────────────────────── */
 export function ChatUI() {
   const [view, setView] = useState<ViewMode>("landing");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -328,13 +354,14 @@ export function ChatUI() {
   }, []);
 
   useEffect(() => {
-    if (!messagesEndRef.current) {
-      return;
-    }
+    if (!messagesEndRef.current) return;
     messagesEndRef.current.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [messages, transcriptPreview, pendingReply]);
 
-  const canGenerate = useMemo(() => Boolean(weekConfig) && !pendingReply && !pendingSchedule, [pendingReply, pendingSchedule, weekConfig]);
+  const canGenerate = useMemo(
+    () => Boolean(weekConfig) && !pendingReply && !pendingSchedule,
+    [pendingReply, pendingSchedule, weekConfig],
+  );
 
   async function requestAssistantReply(nextMessages: ChatMessage[]) {
     setPendingReply(true);
@@ -346,9 +373,7 @@ export function ChatUI() {
         body: JSON.stringify({ messages: nextMessages }),
       });
       const payload = (await response.json()) as ChatResponse & { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error || "Chat request failed");
-      }
+      if (!response.ok) throw new Error(payload.error || "Chat request failed");
       setWeekConfig(payload.weekConfig);
       setConfirmationReady(payload.confirmationReady);
       setMessages((current) => [
@@ -369,9 +394,7 @@ export function ChatUI() {
 
   async function submitUserMessage(content: string) {
     const trimmed = content.trim();
-    if (!trimmed) {
-      return;
-    }
+    if (!trimmed) return;
     setDraft("");
     setTranscriptPreview("");
     setView("chat");
@@ -387,9 +410,7 @@ export function ChatUI() {
   }
 
   async function generateSchedule() {
-    if (!weekConfig) {
-      return;
-    }
+    if (!weekConfig) return;
     setPendingSchedule(true);
     setSchedule(null);
     setReasoningEvents([]);
@@ -420,9 +441,7 @@ export function ChatUI() {
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
+        if (done) break;
         buffer += decoder.decode(value, { stream: true });
         const chunks = buffer.split("\n\n");
         buffer = chunks.pop() ?? "";
@@ -433,9 +452,7 @@ export function ChatUI() {
             .find((line) => line.startsWith("data:"))
             ?.slice(5)
             .trim();
-          if (!dataLine) {
-            continue;
-          }
+          if (!dataLine) continue;
           const event = JSON.parse(dataLine) as ReasoningEvent;
           if (event.type === "complete" && event.content) {
             const completed = event.content as ScheduleRun;
@@ -454,9 +471,7 @@ export function ChatUI() {
   }
 
   async function sendEmail() {
-    if (!schedule?.schedule_id || !emailRecipient.trim()) {
-      return;
-    }
+    if (!schedule?.schedule_id || !emailRecipient.trim()) return;
     setEmailStatus("Sending...");
     try {
       const response = await fetch("/api/email", {
@@ -468,9 +483,7 @@ export function ChatUI() {
         }),
       });
       const payload = (await response.json()) as { error?: string; recipient_email?: string };
-      if (!response.ok) {
-        throw new Error(payload.error || "Email delivery failed");
-      }
+      if (!response.ok) throw new Error(payload.error || "Email delivery failed");
       setEmailStatus(`Sent to ${payload.recipient_email ?? emailRecipient.trim()}`);
     } catch (caughtError) {
       setEmailStatus(caughtError instanceof Error ? caughtError.message : "Email delivery failed");
@@ -484,24 +497,27 @@ export function ChatUI() {
     setVoiceAutoStart(true);
   }
 
+  function resetAll() {
+    setView("landing");
+    setDraft("");
+    setMessages([]);
+    setTranscriptPreview("");
+    setWeekConfig(restaurantSnapshot?.week_config ?? null);
+    setSchedule(null);
+    setReasoningEvents([]);
+    setConfirmationReady(false);
+    setError("");
+    setEmailStatus("");
+  }
+
   return (
     <div className="min-h-full">
       <MobileDrawer
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        onNewChat={() => {
-          setView("landing");
-          setDraft("");
-          setMessages([]);
-          setTranscriptPreview("");
-          setWeekConfig(restaurantSnapshot?.week_config ?? null);
-          setSchedule(null);
-          setReasoningEvents([]);
-          setConfirmationReady(false);
-          setError("");
-          setEmailStatus("");
-        }}
+        onNewChat={resetAll}
       />
+
       {view === "landing" ? (
         <LandingView
           draft={draft}
@@ -523,9 +539,7 @@ export function ChatUI() {
           autoStart={voiceAutoStart}
           onRecordingStateChange={(state) => {
             setVoiceState(state);
-            if (!state.isRecording && !state.isTranscribing) {
-              setVoiceAutoStart(false);
-            }
+            if (!state.isRecording && !state.isTranscribing) setVoiceAutoStart(false);
           }}
           onTranscriptPreview={setTranscriptPreview}
           onError={setError}
@@ -535,186 +549,186 @@ export function ChatUI() {
           }}
         />
       ) : (
-        <div className="flex min-h-full flex-col pb-8">
-          <TopControls onOpenMenu={() => setMobileMenuOpen(true)} />
+        /* ─── Chat view ────────────────────────────────────── */
+        <div className="flex min-h-full flex-col pb-4">
+          <TopBar onOpenMenu={() => setMobileMenuOpen(true)} />
 
-          <div className="mx-auto flex w-full max-w-[920px] flex-1 flex-col px-4 pt-4 md:px-0 md:pt-6">
-            <div className="mb-4 flex items-center justify-between gap-3 px-1">
+          <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col pt-2 md:pt-4">
+            {/* Header */}
+            <div className="mb-4 flex items-center justify-between px-1">
               <div>
-                <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Acquerello Scheduled</p>
-                <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.03em] text-[#111827]">Conversation</h2>
+                <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">Conversation</h2>
               </div>
               <Badge variant={confirmationReady ? "success" : "muted"}>
-                {confirmationReady ? "Ready to generate" : "Drafting"}
+                {confirmationReady ? "Ready" : "Drafting"}
               </Badge>
             </div>
 
-            <div className="flex-1 overflow-y-auto pb-8">
-              <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
-                {messages.length === 0 && !transcriptPreview ? (
-                  <div className="rounded-[28px] border border-dashed border-[var(--tenant-border-color)] bg-white px-6 py-8 text-[15px] leading-7 text-[#667085] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                    Start by typing or speaking what changed this week. The assistant will confirm the operational constraints before generation.
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto pb-6">
+              <div className="flex flex-col gap-3">
+                {messages.length === 0 && !transcriptPreview && (
+                  <div className="rounded-[14px] border border-dashed border-[#d2d2d7] bg-white/60 px-5 py-5 text-[15px] leading-relaxed text-[#86868b]">
+                    Start by typing or speaking what changed this week. The assistant will confirm the constraints before generation.
                   </div>
-                ) : null}
+                )}
 
                 {messages.map((message) => (
                   <MessageBubble key={message.id} message={message} />
                 ))}
 
-                {transcriptPreview ? (
+                {transcriptPreview && (
                   <div className="flex justify-end">
-                    <div className="max-w-[85%] rounded-[24px] border border-dashed border-[#93c5fd] bg-[#eff6ff] px-5 py-3.5 text-[15px] leading-7 text-[#1d4ed8] md:max-w-[70%]">
+                    <div className="max-w-[82%] rounded-[18px] border border-dashed border-[hsl(var(--primary))]/30 bg-[hsl(var(--accent))] px-4 py-3 text-[15px] leading-relaxed text-[hsl(var(--primary))] md:max-w-[70%]">
                       {transcriptPreview}
                     </div>
                   </div>
-                ) : null}
+                )}
 
-                {pendingReply ? (
-                  <div className="rounded-[24px] border border-[var(--tenant-border-color)] bg-white px-5 py-4 text-[15px] text-[#475467] shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-                    <div className="inline-flex items-center gap-3">
-                      <LoaderCircle className="h-4 w-4 animate-spin text-[#2563eb]" />
-                      Aligning the weekly constraints...
+                {pendingReply && (
+                  <div className="apple-card rounded-[14px] px-4 py-3.5 text-[15px] text-[#86868b]">
+                    <div className="inline-flex items-center gap-2.5">
+                      <LoaderCircle className="h-4 w-4 animate-spin text-[hsl(var(--primary))]" />
+                      Aligning constraints...
                     </div>
                   </div>
-                ) : null}
+                )}
 
-                {error ? (
-                  <div className="rounded-[24px] border border-[#fecaca] bg-[#fff1f2] px-5 py-4 text-[14px] text-[#b42318]">
+                {error && (
+                  <div className="rounded-[14px] bg-[hsl(var(--danger))]/[0.08] px-4 py-3.5 text-[14px] text-[hsl(var(--danger))]">
                     {error}
                   </div>
-                ) : null}
+                )}
 
-                {weekConfig ? (
-                  <div className="apple-panel rounded-[30px] px-6 py-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Next step</p>
-                        <h3 className="mt-1 text-[22px] font-semibold tracking-[-0.03em] text-[#111827]">Generate this week</h3>
-                        <p className="mt-2 text-[15px] leading-7 text-[#667085]">
-                          Once the plan looks right, run the integrity check and deterministic scheduler.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <Button type="button" size="lg" disabled={!canGenerate} onClick={() => void generateSchedule()}>
-                        {pendingSchedule ? <LoaderCircle className="h-5 w-5 animate-spin" /> : null}
-                        Generate schedule
+                {/* Generate action card */}
+                {weekConfig && (
+                  <div className="apple-card rounded-[16px] p-5">
+                    <h3 className="text-[17px] font-semibold text-[#1d1d1f]">Generate schedule</h3>
+                    <p className="mt-1 text-[14px] leading-relaxed text-[#86868b]">
+                      Run the integrity check and deterministic scheduler.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2.5">
+                      <Button type="button" disabled={!canGenerate} onClick={() => void generateSchedule()}>
+                        {pendingSchedule && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                        Generate
                       </Button>
-                      <Button
-                        type="button"
-                        size="lg"
-                        variant="secondary"
-                        onClick={() => {
-                          setView("landing");
-                          setDraft("");
-                          setMessages([]);
-                          setTranscriptPreview("");
-                          setWeekConfig(restaurantSnapshot?.week_config ?? null);
-                          setSchedule(null);
-                          setReasoningEvents([]);
-                          setConfirmationReady(false);
-                          setError("");
-                          setEmailStatus("");
-                        }}
-                      >
+                      <Button type="button" variant="secondary" onClick={resetAll}>
                         Start over
                       </Button>
                     </div>
                   </div>
-                ) : null}
+                )}
 
-                {(reasoningEvents.length > 0 || pendingSchedule) ? (
+                {/* Reasoning stream */}
+                {(reasoningEvents.length > 0 || pendingSchedule) && (
                   <ReasoningStream events={reasoningEvents} running={pendingSchedule} />
-                ) : null}
+                )}
 
-                {schedule ? (
+                {/* Schedule result + email */}
+                {schedule && (
                   <>
                     <SchedulePreview schedule={schedule} weekConfig={weekConfig} />
-                    <div className="apple-panel rounded-[30px] px-6 py-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Deliver</p>
-                          <h3 className="mt-1 text-[22px] font-semibold tracking-[-0.03em] text-[#111827]">Email workbook</h3>
-                        </div>
+
+                    <div className="apple-card rounded-[16px] p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-[17px] font-semibold text-[#1d1d1f]">Email workbook</h3>
                         <Badge variant={schedule.email_sent_at ? "success" : "muted"}>
                           {schedule.email_sent_at ? "Sent" : "Not sent"}
                         </Badge>
                       </div>
 
-                      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                      <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
                         <Input
                           value={emailRecipient}
                           onChange={(event) => setEmailRecipient(event.target.value)}
                           placeholder="chef@acquerello.com"
-                          className="h-12 rounded-2xl"
+                          className="flex-1"
                         />
-                        <Button type="button" size="lg" onClick={() => void sendEmail()} disabled={!emailRecipient.trim()}>
-                          Send email
+                        <Button type="button" onClick={() => void sendEmail()} disabled={!emailRecipient.trim()}>
+                          Send
                         </Button>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap gap-3">
-                        {schedule.excel_url ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {schedule.excel_url && (
                           <a
                             href={`/api/history/${schedule.schedule_id}/artifacts/schedule_output.xlsx`}
-                            className="inline-flex h-11 items-center justify-center rounded-xl border border-[var(--tenant-border-color)] bg-white px-4 text-sm font-medium text-[#111827] transition hover:bg-[#f8fafc]"
+                            className="inline-flex h-9 items-center rounded-[10px] bg-black/[0.04] px-3.5 text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-black/[0.07]"
                           >
                             Download workbook
                           </a>
-                        ) : null}
+                        )}
                         <a
                           href={`/history/${schedule.schedule_id}`}
-                          className="inline-flex h-11 items-center justify-center rounded-xl border border-[var(--tenant-border-color)] bg-white px-4 text-sm font-medium text-[#111827] transition hover:bg-[#f8fafc]"
+                          className="inline-flex h-9 items-center rounded-[10px] bg-black/[0.04] px-3.5 text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-black/[0.07]"
                         >
-                          Open run detail
+                          View details
                         </a>
                       </div>
 
-                      {emailStatus ? <p className="mt-4 text-sm text-[#667085]">{emailStatus}</p> : null}
+                      {emailStatus && (
+                        <p className="mt-3 text-[13px] text-[#86868b]">{emailStatus}</p>
+                      )}
                     </div>
                   </>
-                ) : null}
+                )}
 
                 <div ref={messagesEndRef} />
               </div>
             </div>
 
-            <div className="sticky bottom-0 left-0 right-0 mx-auto w-full max-w-[820px] pb-2 pt-4">
-              <div className="apple-panel rounded-[30px] px-4 py-4">
-                <Textarea
+            {/* Sticky input bar */}
+            <div className="sticky bottom-0 mx-auto w-full max-w-[720px] pb-1 pt-3">
+              <div className="apple-card flex items-end gap-2.5 rounded-[20px] px-3.5 py-3">
+                {/* Voice button */}
+                <VoiceInput
+                  autoStart={voiceAutoStart}
+                  onRecordingStateChange={({ isRecording, isTranscribing }) => {
+                    setVoiceState({ isRecording, isTranscribing });
+                    if (!isRecording && !isTranscribing) setVoiceAutoStart(false);
+                  }}
+                  onTranscriptPreview={setTranscriptPreview}
+                  onError={setError}
+                  onTranscript={async (text) => {
+                    setVoiceAutoStart(false);
+                    await submitUserMessage(text);
+                  }}
+                />
+
+                {/* Text input */}
+                <textarea
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder="Tell me what is different this week"
-                  className="min-h-[88px] resize-none border-0 bg-transparent px-2 py-2 text-[16px] shadow-none ring-0 placeholder:text-[#98a2b3] focus:border-0 focus:ring-0"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      if (draft.trim() && !pendingReply) void submitUserMessage(draft);
+                    }
+                  }}
+                  placeholder="Message..."
+                  rows={1}
+                  className="max-h-[120px] min-h-[36px] flex-1 resize-none bg-transparent py-1.5 text-[16px] leading-relaxed text-[#1d1d1f] outline-none placeholder:text-[#c7c7cc]"
                 />
-                <div className="mt-3 flex items-end justify-between gap-3">
-                  <div className="flex-1">
-                    <VoiceInput
-                      autoStart={voiceAutoStart}
-                      onRecordingStateChange={({ isRecording, isTranscribing }) => {
-                        setVoiceState({ isRecording, isTranscribing });
-                        if (!isRecording && !isTranscribing) {
-                          setVoiceAutoStart(false);
-                        }
-                      }}
-                      onTranscriptPreview={setTranscriptPreview}
-                      onError={setError}
-                      onTranscript={async (text) => {
-                        setVoiceAutoStart(false);
-                        await submitUserMessage(text);
-                      }}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() => void submitUserMessage(draft)}
-                    disabled={pendingReply || !draft.trim()}
-                    className="h-[58px] min-w-[132px] rounded-full px-5 text-[16px] shadow-[0_12px_24px_rgba(37,99,235,0.20)] md:h-[62px] md:min-w-[148px] md:px-6 md:text-[17px]"
-                  >
-                    {pendingReply ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                    Send
-                  </Button>
-                </div>
+
+                {/* Send button */}
+                <button
+                  type="button"
+                  onClick={() => void submitUserMessage(draft)}
+                  disabled={pendingReply || !draft.trim()}
+                  className={cn(
+                    "mb-0.5 flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-full transition-all",
+                    draft.trim() && !pendingReply
+                      ? "bg-[hsl(var(--primary))] text-white"
+                      : "bg-[#e8e8ed] text-[#c7c7cc]",
+                  )}
+                  aria-label="Send"
+                >
+                  {pendingReply ? (
+                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  )}
+                </button>
               </div>
             </div>
           </div>

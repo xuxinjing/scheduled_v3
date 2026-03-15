@@ -3,7 +3,6 @@
 import { Mic, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { DEFAULT_TRANSCRIBE_MODEL } from "@/lib/whisper";
 import { cn } from "@/lib/utils";
 
@@ -57,9 +56,7 @@ export function VoiceInput({
       autoStartLockRef.current = false;
       return;
     }
-    if (autoStartLockRef.current || isRecording || isTranscribing || disabled) {
-      return;
-    }
+    if (autoStartLockRef.current || isRecording || isTranscribing || disabled) return;
     autoStartLockRef.current = true;
     void startRecording().catch((error) => {
       onError?.(error instanceof Error ? error.message : "Unable to start microphone");
@@ -68,9 +65,7 @@ export function VoiceInput({
 
   useEffect(() => {
     return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       streamRef.current?.getTracks().forEach((track) => track.stop());
       audioContextRef.current?.close().catch(() => undefined);
       recognitionRef.current?.stop();
@@ -78,9 +73,7 @@ export function VoiceInput({
   }, []);
 
   async function startRecording() {
-    if (disabled || isRecording || isTranscribing) {
-      return;
-    }
+    if (disabled || isRecording || isTranscribing) return;
 
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -145,15 +138,11 @@ export function VoiceInput({
     }
 
     recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunksRef.current.push(event.data);
-      }
+      if (event.data.size > 0) chunksRef.current.push(event.data);
     };
 
     recorder.onstop = async () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       recognitionRef.current?.stop();
       setBars([0.18, 0.24, 0.28, 0.22, 0.2, 0.16]);
       stream.getTracks().forEach((track) => track.stop());
@@ -169,9 +158,7 @@ export function VoiceInput({
           body: formData,
         });
         const payload = (await response.json()) as { text?: string; error?: string };
-        if (!response.ok || !payload.text) {
-          throw new Error(payload.error || "Transcription failed");
-        }
+        if (!response.ok || !payload.text) throw new Error(payload.error || "Transcription failed");
         onTranscriptPreview?.(payload.text);
         await onTranscript(payload.text);
         onTranscriptPreview?.("");
@@ -193,85 +180,77 @@ export function VoiceInput({
     setIsRecording(false);
   }
 
+  /* ─── Fullscreen variant ─── */
   if (variant === "fullscreen") {
     return (
       <div className="flex flex-col items-center justify-center">
-        <div className="flex h-[160px] w-[160px] items-center justify-center rounded-full bg-white/48 backdrop-blur-xl shadow-[0_24px_60px_rgba(15,23,42,0.10)]">
-          <Button
+        {/* Outer ring */}
+        <div className="flex h-[140px] w-[140px] items-center justify-center rounded-full bg-white/50 shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_8px_32px_rgba(0,0,0,0.08)]">
+          <button
             type="button"
-            size="icon"
             disabled={disabled || isTranscribing}
-            onClick={isRecording ? stopRecording : startRecording}
+            onClick={isRecording ? stopRecording : () => void startRecording()}
             className={cn(
-              "h-[108px] w-[108px] rounded-full border-[#d7dfed] bg-white/82 text-[#0f172a] shadow-[0_14px_30px_rgba(15,23,42,0.08)] hover:bg-white",
-              isRecording && "border-[hsl(var(--danger))] bg-[hsl(var(--danger))] text-white hover:bg-[hsl(var(--danger))]",
+              "flex h-[80px] w-[80px] items-center justify-center rounded-full transition-all duration-300",
+              isRecording
+                ? "bg-[hsl(var(--danger))] text-white shadow-[0_4px_16px_rgba(220,38,38,0.3)]"
+                : "bg-white text-[#1d1d1f] shadow-[0_2px_12px_rgba(0,0,0,0.08)]",
             )}
           >
-            {isRecording ? <Square className="h-9 w-9" /> : <Mic className="h-9 w-9" />}
-          </Button>
+            {isRecording ? (
+              <Square className="h-6 w-6" fill="currentColor" />
+            ) : (
+              <Mic className="h-7 w-7" strokeWidth={1.6} />
+            )}
+          </button>
         </div>
 
-        <div className="mt-8 flex items-end gap-2">
+        {/* Waveform bars */}
+        <div className="mt-6 flex items-end gap-1.5">
           {bars.map((bar, index) => (
             <span
               key={index}
               className={cn(
-                "w-2 rounded-full bg-[hsl(var(--primary))] transition-all duration-150",
-                isRecording ? "opacity-100" : "opacity-45",
+                "w-[5px] rounded-full transition-all duration-150",
+                isRecording ? "bg-[hsl(var(--primary))]" : "bg-[#d2d2d7]",
               )}
-              style={{ height: `${20 + bar * 48}px` }}
+              style={{ height: `${14 + bar * 36}px` }}
             />
           ))}
         </div>
 
-        <p className="mt-8 text-[26px] font-semibold tracking-[-0.03em] text-[#111827]">
-          {isRecording ? "Listening..." : isTranscribing ? "Transcribing..." : "Ready to record"}
+        {/* Status text */}
+        <p className="mt-6 text-[22px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+          {isRecording ? "Listening\u2026" : isTranscribing ? "Transcribing\u2026" : "Tap to record"}
         </p>
-        <p className="mt-2 text-center text-[15px] text-[#667085]">
-          {isRecording ? "Speak naturally. Tap the center button when you are done." : "We will turn your voice note into schedule instructions."}
+        <p className="mt-1.5 text-center text-[15px] text-[#86868b]">
+          {isRecording
+            ? "Tap the button when done."
+            : "We\u2019ll turn your voice into schedule instructions."}
         </p>
       </div>
     );
   }
 
+  /* ─── Inline variant (compact) ─── */
   return (
-    <div className="apple-panel flex-1 rounded-[24px] p-4">
-      <div className="flex items-center gap-4">
-        <Button
-          type="button"
-          size="icon"
-          disabled={disabled || isTranscribing}
-          onClick={isRecording ? stopRecording : startRecording}
-          className={cn(
-            "h-[60px] w-[60px] rounded-full border-[#dbe2ec] bg-[#dde3ee] text-[#0f172a] shadow-none hover:bg-[#d6dde8]",
-            isRecording && "border-[hsl(var(--danger))] bg-[hsl(var(--danger))] hover:bg-[hsl(var(--danger))]",
-          )}
-        >
-          {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-[#111827]">
-            {isRecording ? "Listening now" : isTranscribing ? "Transcribing audio" : "Speak the weekly changes"}
-          </p>
-          <p className="mt-1 text-sm text-[#667085]">
-            {isRecording
-              ? "Tap again to stop."
-              : "Example: CDC is back, Chef is off Tuesday, Thursday through Saturday are peak."}
-          </p>
-          <div className="mt-3 flex items-end gap-1.5">
-            {bars.map((bar, index) => (
-              <span
-                key={index}
-                className={cn(
-                  "w-1.5 rounded-full bg-[hsl(var(--primary))] transition-all duration-150",
-                  isRecording ? "opacity-100" : "opacity-55",
-                )}
-                style={{ height: `${12 + bar * 26}px` }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    <button
+      type="button"
+      disabled={disabled || isTranscribing}
+      onClick={isRecording ? stopRecording : () => void startRecording()}
+      className={cn(
+        "flex h-[36px] w-[36px] flex-shrink-0 items-center justify-center rounded-full transition-all",
+        isRecording
+          ? "bg-[hsl(var(--danger))] text-white"
+          : "text-[#86868b] hover:bg-black/5 active:bg-black/8",
+      )}
+      aria-label={isRecording ? "Stop recording" : "Voice input"}
+    >
+      {isRecording ? (
+        <Square className="h-3.5 w-3.5" fill="currentColor" />
+      ) : (
+        <Mic className="h-[18px] w-[18px]" strokeWidth={1.8} />
+      )}
+    </button>
   );
 }

@@ -5,27 +5,17 @@ import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReasoningEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function statusIcon(event: ReasoningEvent) {
-  if (event.type === "phase") {
-    return <Sparkles className="h-4 w-4" />;
-  }
-  if (event.type === "code_fix" || event.type === "code_change") {
-    return <Wrench className="h-4 w-4" />;
-  }
-  if (event.type === "error" || event.status === "failed" || event.status === "fail") {
-    return <X className="h-4 w-4 text-[hsl(var(--danger))]" />;
-  }
-  if (event.status === "warning" || event.status === "warn") {
-    return <AlertTriangle className="h-4 w-4 text-[hsl(var(--warning))]" />;
-  }
-  if (event.status === "complete" || event.status === "pass" || event.type === "summary") {
-    return <Check className="h-4 w-4 text-[hsl(var(--success))]" />;
-  }
-  return <LoaderCircle className="h-4 w-4 animate-spin text-[hsl(var(--primary))]" />;
+  if (event.type === "phase") return <Sparkles className="h-3.5 w-3.5 text-[hsl(var(--primary))]" />;
+  if (event.type === "code_fix" || event.type === "code_change") return <Wrench className="h-3.5 w-3.5 text-[#86868b]" />;
+  if (event.type === "error" || event.status === "failed" || event.status === "fail") return <X className="h-3.5 w-3.5 text-[hsl(var(--danger))]" />;
+  if (event.status === "warning" || event.status === "warn") return <AlertTriangle className="h-3.5 w-3.5 text-[hsl(var(--warning))]" />;
+  if (event.status === "complete" || event.status === "pass" || event.type === "summary") return <Check className="h-3.5 w-3.5 text-[hsl(var(--success))]" />;
+  return <LoaderCircle className="h-3.5 w-3.5 animate-spin text-[hsl(var(--primary))]" />;
 }
 
 function ReasoningLine({ event, active }: { event: ReasoningEvent; active: boolean }) {
@@ -33,9 +23,7 @@ function ReasoningLine({ event, active }: { event: ReasoningEvent; active: boole
   const [visible, setVisible] = useState(event.type === "phase" || event.type === "complete" ? target : "");
 
   useEffect(() => {
-    if (!target) {
-      return;
-    }
+    if (!target) return;
     if (event.type === "phase" || event.type === "complete") {
       setVisible(target);
       return;
@@ -47,9 +35,7 @@ function ReasoningLine({ event, active }: { event: ReasoningEvent; active: boole
       frame += 1;
       const count = Math.min(target.length, Math.floor((frame / 60) * charsPerSecond));
       setVisible(target.slice(0, count));
-      if (count < target.length) {
-        raf = requestAnimationFrame(step);
-      }
+      if (count < target.length) raf = requestAnimationFrame(step);
     };
     setVisible("");
     raf = requestAnimationFrame(step);
@@ -59,17 +45,13 @@ function ReasoningLine({ event, active }: { event: ReasoningEvent; active: boole
   return (
     <div
       className={cn(
-        "flex gap-3 rounded-2xl border px-3 py-3 transition",
-        event.type === "phase"
-          ? "border-[hsl(var(--accent))] bg-[hsl(var(--accent))]/55"
-          : "border-[hsl(var(--border))] bg-white/78 backdrop-blur-md",
-        active && "border-[hsl(var(--primary))]/35",
+        "flex items-start gap-2.5 rounded-[10px] px-3 py-2.5 transition-colors",
+        event.type === "phase" ? "bg-[hsl(var(--primary))]/[0.06]" : "bg-black/[0.02]",
+        active && "bg-[hsl(var(--primary))]/[0.08]",
       )}
     >
-      <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--secondary))]">
-        {statusIcon(event)}
-      </div>
-      <p className={cn("min-w-0 flex-1 whitespace-pre-wrap text-sm leading-6", event.type === "phase" && "font-medium")}>
+      <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center">{statusIcon(event)}</div>
+      <p className={cn("min-w-0 flex-1 whitespace-pre-wrap text-[13px] leading-5", event.type === "phase" && "font-medium")}>
         {visible}
       </p>
     </div>
@@ -87,9 +69,7 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
   const bodyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (running) {
-      setCollapsed(false);
-    }
+    if (running) setCollapsed(false);
   }, [running]);
 
   useEffect(() => {
@@ -100,9 +80,7 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
   }, [events, running]);
 
   useEffect(() => {
-    if (!bodyRef.current || collapsed) {
-      return;
-    }
+    if (!bodyRef.current || collapsed) return;
     const element = bodyRef.current;
     const timeout = window.setTimeout(() => {
       element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
@@ -114,38 +92,30 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
   const activeIndex = running ? events.length - 1 : -1;
 
   return (
-    <Card className="rounded-[30px]">
-      <CardHeader className="border-b border-[var(--tenant-border-color)]">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#2563eb]">Progress</p>
-            <CardTitle className="mt-1 text-[24px] tracking-[-0.03em]">Schedule generation</CardTitle>
-            <CardDescription>Integrity check and solver progress stream here in real time.</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <CardTitle>Generation progress</CardTitle>
             {running ? (
               <Badge variant="warning">Live</Badge>
             ) : finalEvent ? (
-              <Badge variant="success">Complete</Badge>
+              <Badge variant="success">Done</Badge>
             ) : (
               <Badge variant="muted">Idle</Badge>
             )}
-            <Button variant="ghost" size="sm" onClick={() => setCollapsed((value) => !value)}>
-              {collapsed ? "Show" : "Hide"}
-              {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-            </Button>
           </div>
+          <Button variant="ghost" size="sm" onClick={() => setCollapsed((value) => !value)}>
+            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          </Button>
         </div>
       </CardHeader>
       {!collapsed && (
-        <CardContent className="pt-5">
-          <div
-            ref={bodyRef}
-            className="scrollbar-thin max-h-[360px] space-y-3 overflow-y-auto rounded-[24px] bg-white/48 p-3 backdrop-blur-md"
-          >
+        <CardContent>
+          <div ref={bodyRef} className="max-h-[320px] space-y-1 overflow-y-auto">
             {events.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-white px-4 py-5 text-sm text-[hsl(var(--muted-foreground))]">
-                Confirm the week and the system will stream its checks here.
+              <div className="rounded-[10px] bg-black/[0.02] px-4 py-4 text-[13px] text-[#86868b]">
+                The system will stream its checks here.
               </div>
             ) : (
               events.map((event, index) => (

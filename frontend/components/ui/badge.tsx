@@ -7,18 +7,18 @@ type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
 };
 
 const styles: Record<NonNullable<BadgeProps["variant"]>, string> = {
-  default: "border border-[hsl(var(--accent))] bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]",
-  success: "border border-[hsl(var(--success))]/15 bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
-  warning: "border border-[hsl(var(--warning))]/15 bg-[hsl(var(--warning))]/10 text-[#b45309]",
-  danger: "border border-[hsl(var(--danger))]/15 bg-[hsl(var(--danger))]/10 text-[hsl(var(--danger))]",
-  muted: "border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]",
+  default: "bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]",
+  success: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
+  warning: "bg-[hsl(var(--warning))]/10 text-[#946800]",
+  danger: "bg-[hsl(var(--danger))]/10 text-[hsl(var(--danger))]",
+  muted: "bg-black/[0.04] text-[#86868b]",
 };
 
 export function Badge({ className, variant = "default", ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em]",
+        "inline-flex items-center rounded-[6px] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em]",
         styles[variant],
         className,
       )}

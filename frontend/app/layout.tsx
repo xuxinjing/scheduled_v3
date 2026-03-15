@@ -20,29 +20,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <section className="app-container overflow-x-hidden">
-          <div className="relative flex h-full bg-white">
-            <aside className="relative hidden h-full w-[240px] flex-shrink-0 overflow-hidden md:block">
-              <div className="flex h-full w-full flex-col border-r border-white/60 bg-[var(--tenant-sidebar-bg)]/88 backdrop-blur-xl tenant-shell">
-                <div className="flex items-center justify-between px-4 pb-2 pt-6">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
-                      <Calendar className="h-4 w-4" />
+          <div className="relative flex h-full">
+            {/* Desktop sidebar */}
+            <aside className="relative hidden h-full w-[220px] flex-shrink-0 md:block">
+              <div className="flex h-full w-full flex-col bg-[var(--tenant-sidebar-bg)] tenant-shell">
+                <div className="px-4 pb-3 pt-6">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[hsl(var(--primary))] text-white">
+                      <Calendar className="h-4 w-4" strokeWidth={2} />
                     </div>
                     <div>
-                      <h1 className="whitespace-nowrap text-sm font-semibold text-[#111827]">Acquerello Scheduled</h1>
-                      <p className="text-[11px] text-slate-500">Kitchen operations</p>
+                      <h1 className="text-[13px] font-semibold text-[#1d1d1f]">Acquerello</h1>
+                      <p className="text-[11px] text-[#86868b]">Scheduled</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-3 pb-4 pt-4">
-                  <div className="flex flex-col gap-2 md:pl-1 md:pr-1">
+                <div className="flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
+                  <div className="flex flex-col gap-0.5">
                     {navItems.map((item) => {
                       const Icon = item.icon;
                       return (
                         <Link key={item.href} href={item.href} className="sidebar-link">
-                          <div className="flex items-center gap-2 text-sm text-slate-700">
-                            <Icon className="h-4 w-4 text-slate-500" />
+                          <div className="flex items-center gap-2.5 text-[13px] text-[#1d1d1f]">
+                            <Icon className="h-[18px] w-[18px] text-[#86868b]" strokeWidth={1.6} />
                             <span>{item.label}</span>
                           </div>
                         </Link>
@@ -51,22 +52,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </div>
                 </div>
 
-                <div className="mt-auto p-3">
-                  <div className="text-[11px] text-slate-500">Powered by Engagement AI</div>
+                <div className="px-4 pb-4">
+                  <div className="text-[11px] text-[#86868b]">Powered by Engagement AI</div>
                 </div>
               </div>
             </aside>
 
-            <main className="relative h-full flex-1 overflow-hidden bg-[#f3f4f6]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.72),_transparent_56%)]" />
-
-              <div className="absolute left-0 top-0 z-50 w-full border-b border-white/60 bg-white/72 backdrop-blur-xl">
-                <div className="flex h-14 w-full items-center justify-between px-4 md:px-5" />
-              </div>
-
-              <div className="relative z-10 h-full overflow-y-auto pt-12 2xl:pt-14">
-                <div className="mx-auto flex min-h-full w-full flex-col md:max-w-[95%] 2xl:w-[80%]">
-                  <div className="flex-1 pb-6">{children}</div>
+            {/* Main content */}
+            <main className="relative h-full flex-1 overflow-hidden bg-[#f5f5f7]">
+              <div className="relative z-10 h-full overflow-y-auto">
+                <div className="mx-auto flex min-h-full w-full flex-col px-4 md:max-w-[96%] md:px-0 2xl:max-w-[860px]">
+                  <div className="flex-1">{children}</div>
                 </div>
               </div>
             </main>
