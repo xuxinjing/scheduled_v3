@@ -187,6 +187,8 @@ export function ClaudeMobileUI() {
   const isConversation = messages.length > 0;
   const isActiveInput  = isConversation || inputFocused;
 
+  const [keyboardHeight, setKeyboardHeight]   = useState(0);
+
   const [weekOpen, setWeekOpen]               = useState(false);
   const [selectedWeekIdx, setSelectedWeekIdx] = useState(1); // default: next Monday
   const [ddCoords, setDdCoords]               = useState({ top: 0, left: 0 });
@@ -219,6 +221,22 @@ export function ClaudeMobileUI() {
     setWeekOpen((v: boolean) => !v);
   }
 
+  /* iOS Safari visual viewport — push input bar above keyboard */
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const handleResize = () => {
+      const offset = window.innerHeight - viewport.height - viewport.offsetTop;
+      setKeyboardHeight(offset > 0 ? offset : 0);
+    };
+    viewport.addEventListener("resize", handleResize);
+    viewport.addEventListener("scroll", handleResize);
+    return () => {
+      viewport.removeEventListener("resize", handleResize);
+      viewport.removeEventListener("scroll", handleResize);
+    };
+  }, []);
+
   /* scroll helpers */
   const scrollToBottom = useCallback(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -230,10 +248,10 @@ export function ClaudeMobileUI() {
     setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 60);
   }, []);
 
-  /* auto-scroll on new content */
+  /* auto-scroll on new content or keyboard open/close */
   useEffect(() => {
     if (isAtBottom) scrollToBottom();
-  }, [messages, pending, isAtBottom, scrollToBottom]);
+  }, [messages, pending, isAtBottom, scrollToBottom, keyboardHeight]);
 
   /* focus textarea when transitioning to active input */
   useEffect(() => {
@@ -287,6 +305,20 @@ export function ClaudeMobileUI() {
       <style>{`
         .claude-textarea::placeholder { color: #AAAAAA; }
         .claude-pill-input::placeholder { color: #9B9B9B; }
+
+        /* ── Navbar: always fixed ── */
+        .cl-nav {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 100;
+          background: #F9F6F1;
+        }
+
+        /* ── Content offset below fixed nav (mobile: ~102px) ── */
+        .cl-empty { padding-top: 102px; }
+        .cl-msgs  { padding-top: 102px; }
 
         /* ── Input bar: idle (pill) ── */
         .cl-iw {
@@ -405,6 +437,7 @@ export function ClaudeMobileUI() {
             position: fixed !important;
             top: 0 !important;
             left: 50% !important;
+            right: auto !important;
             transform: translateX(-50%) !important;
             width: 448px !important;
             padding: 10px 16px !important;
@@ -412,7 +445,7 @@ export function ClaudeMobileUI() {
             background-color: #F9F6F1 !important;
           }
 
-          .cl-empty { padding-top: 60px; }
+          .cl-empty { padding-top: 60px !important; }
           .cl-msgs  { padding-top: 60px !important; }
 
           /* both idle and active anchor to column center */
@@ -485,8 +518,6 @@ export function ClaudeMobileUI() {
             paddingBottom: 10,
             backgroundColor: "#F9F6F1",
             flexShrink: 0,
-            position: "relative",
-            zIndex: 300,
           }}
         >
           <button
@@ -587,7 +618,7 @@ export function ClaudeMobileUI() {
               flex: 1,
               overflowY: "auto",
               paddingTop: 4,
-              paddingBottom: 130,
+              paddingBottom: 130 + keyboardHeight,
             }}
           >
             {messages.map((msg: Message, i: number) => {
@@ -637,7 +668,10 @@ export function ClaudeMobileUI() {
         )}
 
         {/* ── Unified input bar ────────────────────────────────── */}
-        <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}>
+        <div
+          className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}
+          style={isActiveInput ? { bottom: `${keyboardHeight + 12}px` } : undefined}
+        >
           <div className="cl-ic">
 
             {/* Pill row — visible when idle */}
