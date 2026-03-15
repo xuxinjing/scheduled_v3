@@ -306,6 +306,23 @@ export function ClaudeMobileUI() {
         .claude-textarea::placeholder { color: #AAAAAA; }
         .claude-pill-input::placeholder { color: #9B9B9B; }
 
+        /* ── Overscroll bounce fix: prevent rubber-band gap ── */
+        html, body {
+          overscroll-behavior-y: none;
+          background-color: #F9F6F1;
+        }
+
+        /* ── Navbar backstop: extends cream above viewport for iOS bounce ── */
+        .cl-nav-bg {
+          position: fixed;
+          top: -100px;
+          left: 0;
+          width: 100%;
+          height: calc(60px + env(safe-area-inset-top) + 100px);
+          background: #F9F6F1;
+          z-index: 99;
+        }
+
         /* ── Navbar: always fixed, cream fills status bar zone ── */
         .cl-nav {
           position: fixed;
@@ -509,6 +526,9 @@ export function ClaudeMobileUI() {
           padding: 0,
         }}
       >
+        {/* ── Navbar bounce backstop ── */}
+        <div className="cl-nav-bg" />
+
         {/* ── Nav ──────────────────────────────────────────────── */}
         <nav
           className="cl-nav"
