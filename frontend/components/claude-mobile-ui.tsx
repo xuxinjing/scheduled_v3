@@ -314,7 +314,7 @@ export function ClaudeMobileUI() {
           right: 0;
           z-index: 100;
           background: #F9F6F1;
-          padding-top: env(safe-area-inset-top);
+          padding-top: calc(env(safe-area-inset-top) + 12px);
         }
 
         /* ── Content offset: 60px bar + safe-area-inset-top ── */
@@ -324,8 +324,8 @@ export function ClaudeMobileUI() {
         /* ── Input bar: idle (pill) ── */
         .cl-iw {
           position: sticky;
-          bottom: 0;
-          margin: 0 12px 12px;
+          bottom: calc(env(safe-area-inset-bottom) + 12px);
+          margin: 0 12px 0;
           z-index: 10;
         }
         .cl-ic {
