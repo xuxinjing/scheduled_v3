@@ -606,7 +606,7 @@ export function ClaudeMobileUI() {
                 letterSpacing: "-0.01em",
               }}
             >
-              Hi chef,<br />What&rsquo;s different in the kitchen this week?
+              Hi chef,<br />Ready to create schedule?
             </h1>
           </div>
         )}
