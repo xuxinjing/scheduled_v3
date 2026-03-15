@@ -205,6 +205,18 @@ export function ClaudeMobileUI() {
   const isConversation = messages.length > 0;
   const isActiveInput  = isConversation || inputFocused;
 
+  // Compute next Monday's date at render time
+  const nextMonday = (() => {
+    const d = new Date();
+    const day = d.getDay(); // 0=Sun, 1=Mon, …
+    const daysUntilMonday = day === 1 ? 7 : (8 - day) % 7;
+    d.setDate(d.getDate() + daysUntilMonday);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  })();
+
   /* scroll helpers */
   const scrollToBottom = useCallback(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -358,7 +370,7 @@ export function ClaudeMobileUI() {
             width: 448px !important;
             padding: 10px 16px !important;
             z-index: 100 !important;
-            background-color: #F4EFE6 !important;
+            background-color: #F9F6F1 !important;
           }
 
           .cl-empty { padding-top: 60px; }
@@ -384,7 +396,7 @@ export function ClaudeMobileUI() {
           width: "100vw",
           height: isConversation ? "100vh" : undefined,
           minHeight: "100vh",
-          backgroundColor: "#F4EFE6",
+          backgroundColor: "#F9F6F1",
           display: "flex",
           flexDirection: "column",
           fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
@@ -405,7 +417,7 @@ export function ClaudeMobileUI() {
             paddingLeft: 16,
             paddingRight: 16,
             paddingBottom: 10,
-            backgroundColor: "#F4EFE6",
+            backgroundColor: "#F9F6F1",
             flexShrink: 0,
           }}
         >
@@ -424,9 +436,9 @@ export function ClaudeMobileUI() {
 
           <div style={{ textAlign: "center", flex: 1, margin: "0 8px" }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-              Sonnet 4.6<ChevronDownTitleIcon />
+              Select Week<ChevronDownTitleIcon />
             </div>
-            <div style={{ fontSize: 12, color: "#999", fontWeight: 400, marginTop: 1 }}>Extended</div>
+            <div style={{ fontSize: 12, color: "#999", fontWeight: 400, marginTop: 1 }}>{nextMonday}</div>
           </div>
 
           {isConversation ? (
@@ -489,7 +501,7 @@ export function ClaudeMobileUI() {
                 letterSpacing: "-0.01em",
               }}
             >
-              How can I help you this morning?
+              What&rsquo;s different in the kitchen this week?
             </h1>
           </div>
         )}
@@ -569,7 +581,7 @@ export function ClaudeMobileUI() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
                 onFocus={() => setInputFocused(true)}
                 onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") void sendMessage(); }}
-                placeholder="Chat with Claude"
+                placeholder="Chat with scheduled.ai"
                 style={{
                   flex: 1, border: "none", background: "transparent", outline: "none",
                   fontSize: 16, color: "#2D2D2D",
@@ -594,7 +606,7 @@ export function ClaudeMobileUI() {
                 className="claude-textarea"
                 value={inputValue}
                 rows={1}
-                placeholder="Reply to Claude"
+                placeholder="Reply to scheduled.ai"
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => { setInputValue(e.target.value); autoResize(); }}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => { if (!isConversation && !pending) setInputFocused(false); }}
