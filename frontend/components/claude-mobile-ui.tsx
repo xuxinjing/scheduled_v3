@@ -38,7 +38,7 @@ function AnthropicAsterisk() {
 
 function HamburgerIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
       <line x1="3" y1="6" x2="21" y2="6" />
       <line x1="3" y1="12" x2="21" y2="12" />
       <line x1="3" y1="18" x2="21" y2="18" />
@@ -61,7 +61,7 @@ function ChevronDownTitleIcon() {
 
 function GhostIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M9 10h.01M15 10h.01" />
       <path d="M12 2a8 8 0 0 1 8 8v10l-4-2-2 2-2-2-2 2-2-2-4 2V10a8 8 0 0 1 8-8z" />
     </svg>
@@ -291,14 +291,14 @@ export function ClaudeMobileUI() {
             left: 50% !important;
             transform: translateX(-50%) !important;
             width: 448px !important;
-            padding-top: 16px !important;
-            z-index: 30;
-            background-color: #F4EFE6;
+            padding: 10px 16px !important;
+            z-index: 100 !important;
+            background-color: #F4EFE6 !important;
           }
 
           /* push content below fixed nav */
-          .cl-empty  { padding-top: 80px; }
-          .cl-msgs   { padding-top: 80px !important; }
+          .cl-empty  { padding-top: 60px; }
+          .cl-msgs   { padding-top: 60px !important; }
 
           .cl-input-pill {
             position: fixed !important;
@@ -343,20 +343,29 @@ export function ClaudeMobileUI() {
             paddingTop: 52,
             paddingLeft: 16,
             paddingRight: 16,
-            paddingBottom: 8,
+            paddingBottom: 10,
             backgroundColor: "#F4EFE6",
             flexShrink: 0,
           }}
         >
-          <button type="button" aria-label="Menu" style={{ ...NAV_BTN, backgroundColor: "#EFEFEF" }}>
+          <button
+            type="button"
+            aria-label="Menu"
+            style={{
+              width: 40, height: 40, borderRadius: "50%",
+              backgroundColor: "#EFEFEF", border: "none", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+            }}
+          >
             <HamburgerIcon />
           </button>
 
           <div style={{ textAlign: "center", flex: 1, margin: "0 8px" }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "#2D2D2D", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
               Sonnet 4.6<ChevronDownTitleIcon />
             </div>
-            <div style={{ fontSize: 12, color: "#9B9B9B", marginTop: 1 }}>Extended</div>
+            <div style={{ fontSize: 12, color: "#999", fontWeight: 400, marginTop: 1 }}>Extended</div>
           </div>
 
           {isConversation ? (
@@ -364,12 +373,26 @@ export function ClaudeMobileUI() {
               type="button"
               aria-label="New conversation"
               onClick={resetConversation}
-              style={{ ...NAV_BTN, backgroundColor: "#C96A4A" }}
+              style={{
+                width: 40, height: 40, borderRadius: "50%",
+                backgroundColor: "#C96A4A", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+              }}
             >
               <PlusWhiteIcon />
             </button>
           ) : (
-            <button type="button" aria-label="Incognito" style={{ ...NAV_BTN, backgroundColor: "#EFEFEF", color: "#2D2D2D" }}>
+            <button
+              type="button"
+              aria-label="Incognito"
+              style={{
+                width: 40, height: 40, borderRadius: "50%",
+                backgroundColor: "#EFEFEF", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, color: "#444", boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+              }}
+            >
               <GhostIcon />
             </button>
           )}
