@@ -59,10 +59,10 @@ function ReasoningLine({ event, active }: { event: ReasoningEvent; active: boole
   return (
     <div
       className={cn(
-        "flex gap-3 rounded-xl border px-3 py-3 transition",
+        "flex gap-3 rounded-2xl border px-3 py-3 transition",
         event.type === "phase"
-          ? "border-[hsl(var(--accent))] bg-[hsl(var(--accent))]/40"
-          : "border-[hsl(var(--border))] bg-white",
+          ? "border-[hsl(var(--accent))] bg-[hsl(var(--accent))]/55"
+          : "border-[hsl(var(--border))] bg-white/78 backdrop-blur-md",
         active && "border-[hsl(var(--primary))]/35",
       )}
     >
@@ -114,7 +114,7 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
   const activeIndex = running ? events.length - 1 : -1;
 
   return (
-    <Card className="rounded-[24px]">
+    <Card className="rounded-[30px]">
       <CardHeader className="border-b border-[var(--tenant-border-color)]">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -141,7 +141,7 @@ export function ReasoningStream({ events, running, collapsedByDefault = false }:
         <CardContent className="pt-5">
           <div
             ref={bodyRef}
-            className="scrollbar-thin max-h-[360px] space-y-3 overflow-y-auto rounded-[20px] bg-[#f8fafc] p-3"
+            className="scrollbar-thin max-h-[360px] space-y-3 overflow-y-auto rounded-[24px] bg-white/48 p-3 backdrop-blur-md"
           >
             {events.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-white px-4 py-5 text-sm text-[hsl(var(--muted-foreground))]">

@@ -14,6 +14,7 @@ type VoiceInputProps = {
   onTranscriptPreview?: (text: string) => void;
   onError?: (message: string) => void;
   autoStart?: boolean;
+  variant?: "inline" | "fullscreen";
 };
 
 type BrowserSpeechRecognition = {
@@ -34,6 +35,7 @@ export function VoiceInput({
   onTranscriptPreview,
   onError,
   autoStart = false,
+  variant = "inline",
 }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -191,8 +193,49 @@ export function VoiceInput({
     setIsRecording(false);
   }
 
+  if (variant === "fullscreen") {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <div className="flex h-[160px] w-[160px] items-center justify-center rounded-full bg-white/48 backdrop-blur-xl shadow-[0_24px_60px_rgba(15,23,42,0.10)]">
+          <Button
+            type="button"
+            size="icon"
+            disabled={disabled || isTranscribing}
+            onClick={isRecording ? stopRecording : startRecording}
+            className={cn(
+              "h-[108px] w-[108px] rounded-full border-[#d7dfed] bg-white/82 text-[#0f172a] shadow-[0_14px_30px_rgba(15,23,42,0.08)] hover:bg-white",
+              isRecording && "border-[hsl(var(--danger))] bg-[hsl(var(--danger))] text-white hover:bg-[hsl(var(--danger))]",
+            )}
+          >
+            {isRecording ? <Square className="h-9 w-9" /> : <Mic className="h-9 w-9" />}
+          </Button>
+        </div>
+
+        <div className="mt-8 flex items-end gap-2">
+          {bars.map((bar, index) => (
+            <span
+              key={index}
+              className={cn(
+                "w-2 rounded-full bg-[hsl(var(--primary))] transition-all duration-150",
+                isRecording ? "opacity-100" : "opacity-45",
+              )}
+              style={{ height: `${20 + bar * 48}px` }}
+            />
+          ))}
+        </div>
+
+        <p className="mt-8 text-[26px] font-semibold tracking-[-0.03em] text-[#111827]">
+          {isRecording ? "Listening..." : isTranscribing ? "Transcribing..." : "Ready to record"}
+        </p>
+        <p className="mt-2 text-center text-[15px] text-[#667085]">
+          {isRecording ? "Speak naturally. Tap the center button when you are done." : "We will turn your voice note into schedule instructions."}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 rounded-[22px] border border-[var(--tenant-border-color)] bg-white p-4 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+    <div className="apple-panel flex-1 rounded-[24px] p-4">
       <div className="flex items-center gap-4">
         <Button
           type="button"

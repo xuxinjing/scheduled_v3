@@ -22,14 +22,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <section className="app-container overflow-x-hidden">
           <div className="relative flex h-full bg-white">
             <aside className="relative hidden h-full w-[240px] flex-shrink-0 overflow-hidden md:block">
-              <div className="flex h-full w-full flex-col bg-[var(--tenant-sidebar-bg)] tenant-shell">
+              <div className="flex h-full w-full flex-col border-r border-white/60 bg-[var(--tenant-sidebar-bg)]/88 backdrop-blur-xl tenant-shell">
                 <div className="flex items-center justify-between px-4 pb-2 pt-6">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--primary))]/12 text-[hsl(var(--primary))]">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
                       <Calendar className="h-4 w-4" />
                     </div>
                     <div>
-                      <h1 className="whitespace-nowrap text-sm font-semibold text-[#0e1940]">Acquerello Scheduled</h1>
+                      <h1 className="whitespace-nowrap text-sm font-semibold text-[#111827]">Acquerello Scheduled</h1>
                       <p className="text-[11px] text-slate-500">Kitchen operations</p>
                     </div>
                   </div>
@@ -57,8 +57,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </aside>
 
-            <main className="relative h-full flex-1 overflow-hidden bg-[#f5f5f4]">
-              <div className="absolute left-0 top-0 z-50 w-full bg-white">
+            <main className="relative h-full flex-1 overflow-hidden bg-[#f3f4f6]">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.72),_transparent_56%)]" />
+
+              <div className="absolute left-0 top-0 z-50 w-full border-b border-white/60 bg-white/72 backdrop-blur-xl">
                 <div className="flex h-14 w-full items-center justify-between px-4 md:px-5" />
               </div>
 
