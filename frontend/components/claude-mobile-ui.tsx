@@ -270,13 +270,55 @@ export function ClaudeMobileUI() {
 
   return (
     <>
-      {/* placeholder color can't be set inline; scoped here */}
       <style>{`
         .claude-textarea::placeholder { color: #AAAAAA; }
         .claude-pill-input::placeholder { color: #9B9B9B; }
+
+        /* ── Desktop: phone-frame centered on white page ── */
+        @media (min-width: 768px) {
+          body { background-color: #FFFFFF; }
+
+          .cl-col {
+            width: 448px !important;
+            max-width: 448px !important;
+            margin: 0 auto !important;
+            box-shadow: 0 0 40px rgba(0,0,0,0.08);
+          }
+
+          .cl-nav {
+            position: fixed !important;
+            top: 0 !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 448px !important;
+            padding-top: 16px !important;
+            z-index: 30;
+            background-color: #F4EFE6;
+          }
+
+          /* push content below fixed nav */
+          .cl-empty  { padding-top: 80px; }
+          .cl-msgs   { padding-top: 80px !important; }
+
+          .cl-input-pill {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 448px !important;
+          }
+
+          .cl-input-rect {
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 448px !important;
+            right: auto !important;
+          }
+        }
       `}</style>
 
       <div
+        className="cl-col"
         style={{
           width: "100vw",
           height: isConversation ? "100vh" : undefined,
@@ -293,6 +335,7 @@ export function ClaudeMobileUI() {
       >
         {/* ── Nav ──────────────────────────────────────────────── */}
         <nav
+          className="cl-nav"
           style={{
             display: "flex",
             alignItems: "center",
@@ -335,6 +378,7 @@ export function ClaudeMobileUI() {
         {/* ── Empty state ──────────────────────────────────────── */}
         {!isConversation && (
           <div
+            className="cl-empty"
             style={{
               flex: 1,
               display: "flex",
@@ -370,6 +414,7 @@ export function ClaudeMobileUI() {
         {isConversation && (
           <div
             ref={scrollRef}
+            className="cl-msgs"
             onScroll={handleScroll}
             style={{
               flex: 1,
@@ -427,6 +472,7 @@ export function ClaudeMobileUI() {
         {/* ── Input: pill (empty, unfocused) ───────────────────── */}
         {!isActiveInput && (
           <div
+            className="cl-input-pill"
             style={{
               position: "sticky",
               bottom: 0,
@@ -491,6 +537,7 @@ export function ClaudeMobileUI() {
         {/* ── Input: rectangle (active / conversation) ─────────── */}
         {isActiveInput && (
           <div
+            className="cl-input-rect"
             style={{
               position: "fixed",
               bottom: 0,
