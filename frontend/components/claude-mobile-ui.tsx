@@ -306,7 +306,7 @@ export function ClaudeMobileUI() {
         .claude-textarea::placeholder { color: #AAAAAA; }
         .claude-pill-input::placeholder { color: #9B9B9B; }
 
-        /* ── Navbar: always fixed ── */
+        /* ── Navbar: always fixed, cream fills status bar zone ── */
         .cl-nav {
           position: fixed;
           top: 0;
@@ -314,11 +314,12 @@ export function ClaudeMobileUI() {
           right: 0;
           z-index: 100;
           background: #F9F6F1;
+          padding-top: env(safe-area-inset-top);
         }
 
-        /* ── Content offset below fixed nav (mobile: ~102px) ── */
-        .cl-empty { padding-top: 102px; }
-        .cl-msgs  { padding-top: 102px; }
+        /* ── Content offset: 60px bar + safe-area-inset-top ── */
+        .cl-empty { padding-top: calc(60px + env(safe-area-inset-top)); }
+        .cl-msgs  { padding-top: calc(60px + env(safe-area-inset-top)); }
 
         /* ── Input bar: idle (pill) ── */
         .cl-iw {
@@ -440,13 +441,16 @@ export function ClaudeMobileUI() {
             right: auto !important;
             transform: translateX(-50%) !important;
             width: 448px !important;
-            padding: 10px 16px !important;
+            padding-top: calc(10px + env(safe-area-inset-top)) !important;
+            padding-right: 16px !important;
+            padding-bottom: 10px !important;
+            padding-left: 16px !important;
             z-index: 300 !important;
             background-color: #F9F6F1 !important;
           }
 
-          .cl-empty { padding-top: 60px !important; }
-          .cl-msgs  { padding-top: 60px !important; }
+          .cl-empty { padding-top: calc(60px + env(safe-area-inset-top)) !important; }
+          .cl-msgs  { padding-top: calc(60px + env(safe-area-inset-top)) !important; }
 
           /* both idle and active anchor to column center */
           .cl-iw,
@@ -512,7 +516,6 @@ export function ClaudeMobileUI() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            paddingTop: 52,
             paddingLeft: 16,
             paddingRight: 16,
             paddingBottom: 10,
