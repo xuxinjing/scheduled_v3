@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <section className="app-container overflow-x-hidden">
           <div className="relative flex h-full">
             {/* Desktop sidebar — ChatGPT style */}
-            <aside className="relative hidden h-full w-[260px] flex-shrink-0 md:block">
+            <aside className="hidden">
               <div className="flex h-full w-full flex-col bg-[var(--chatgpt-sidebar-bg)] tenant-shell">
                 {/* New chat button */}
                 <div className="px-3 pt-3">
