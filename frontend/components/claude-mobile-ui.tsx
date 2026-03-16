@@ -493,6 +493,7 @@ export function ClaudeMobileUI() {
             margin: 0 auto !important;
             overflow: hidden !important;
             box-shadow: 0 0 40px rgba(0,0,0,0.08);
+            position: relative !important;
           }
 
           .cl-nav-bg {
@@ -531,9 +532,16 @@ export function ClaudeMobileUI() {
             right: auto !important;
           }
 
-          /* Desktop: sidebar left edge aligns with phone column left edge */
+          /* Desktop: sidebar scoped to column via position: absolute */
           .cl-sb {
-            left: calc(50% - 224px) !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100% !important;
+          }
+          .cl-sb-bd {
+            position: absolute !important;
+            inset: 0 !important;
           }
         }
 
@@ -757,14 +765,18 @@ export function ClaudeMobileUI() {
           <div
             className="cl-empty"
             style={{
-              flex: 1,
+              height: typeof window !== "undefined"
+                ? Math.max(200, window.innerHeight - keyboardHeight - 60 - 80)
+                : undefined,
+              flex: typeof window !== "undefined" ? undefined : 1,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              paddingBottom: 120,
               paddingLeft: 24,
               paddingRight: 24,
+              transition: "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              boxSizing: "border-box",
             }}
           >
             <h1
