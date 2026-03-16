@@ -351,7 +351,9 @@ export function ClaudeMobileUI() {
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           border-radius: 999px;
           max-height: 60px;
-          transition: border-radius 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+          transition: border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                       max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cl-ir {
@@ -359,22 +361,28 @@ export function ClaudeMobileUI() {
           align-items: center;
           padding: 10px 8px 10px 16px;
           gap: 8px;
-          transition: opacity 0.15s ease, max-height 0.25s ease, padding 0.25s ease;
           max-height: 60px;
           overflow: hidden;
+          transition: max-height 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                      opacity 0.15s ease,
+                      padding 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cl-ie {
           max-height: 0;
           overflow: hidden;
           opacity: 0;
           pointer-events: none;
-          transition: opacity 0.2s ease, max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      opacity 0.2s ease 0.05s;
         }
         .cl-ia {
           display: flex;
           align-items: center;
           justify-content: space-between;
           margin-top: 10px;
+          opacity: 0;
+          transform: translateY(8px);
+          transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s;
         }
 
         /* ── Input bar: active / expanded ── */
@@ -397,10 +405,14 @@ export function ClaudeMobileUI() {
           pointer-events: none;
         }
         .cl-iw-on .cl-ie {
-          max-height: 240px;
+          max-height: 280px;
           opacity: 1;
           pointer-events: auto;
           padding: 14px 16px;
+        }
+        .cl-iw-on .cl-ia {
+          opacity: 1;
+          transform: translateY(0);
         }
 
         /* ── Week dropdown ── */
@@ -673,7 +685,7 @@ export function ClaudeMobileUI() {
         )}
 
         {/* ── Scroll-to-bottom button ──────────────────────────── */}
-        {isConversation && !isAtBottom && (
+        {isConversation && !isAtBottom && !isActiveInput && (
           <button
             type="button"
             onClick={scrollToBottom}
