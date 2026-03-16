@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Vapi from "@vapi-ai/web";
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = { role: "user" | "assistant"; content: string; streaming?: boolean };
+type ChatMode = "idle" | "voice" | "text";
 type HistoryItem = { id: number; title: string; preview: string; date: string };
 
 const mockHistory: HistoryItem[] = [
@@ -13,17 +15,20 @@ const mockHistory: HistoryItem[] = [
   { id: 5, title: "Week of 02/23 schedule", preview: "Full crew except Tuesday", date: "Feb 23" },
 ];
 
-/* ── inline bold: **text** → <strong> ─────────────────────────── */
-function parseBold(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/).map((chunk, i) =>
-    chunk.startsWith("**") && chunk.endsWith("**") ? (
-      <strong key={i} style={{ fontWeight: 700 }}>
-        {chunk.slice(2, -2)}
-      </strong>
-    ) : (
-      chunk
-    ),
-  );
+/* ── Render markdown-lite: **bold** + paragraph breaks ─────────── */
+function renderContent(text: string) {
+  const paragraphs = text.split(/\n\n+/);
+  return paragraphs.map((para, pi) => (
+    <p key={pi} style={{ margin: 0, marginBottom: pi < paragraphs.length - 1 ? 12 : 0 }}>
+      {para.split(/(\*\*[^*]+\*\*)/).map((chunk, ci) =>
+        chunk.startsWith("**") && chunk.endsWith("**") ? (
+          <strong key={ci} style={{ fontWeight: 600 }}>{chunk.slice(2, -2)}</strong>
+        ) : (
+          chunk
+        )
+      )}
+    </p>
+  ));
 }
 
 /* ── SVG icons ─────────────────────────────────────────────────── */
@@ -52,9 +57,15 @@ function ChevronDownTitleIcon() {
 
 function GhostIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 10h.01M15 10h.01" />
-      <path d="M12 2a8 8 0 0 1 8 8v10l-4-2-2 2-2-2-2 2-2-2-4 2V10a8 8 0 0 1 8-8z" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {/* Puffy toque top */}
+      <path d="M7 13C7 13 5 12.5 5 10C5 7.8 6.8 6 9 6C9.4 6 9.8 6.1 10.1 6.2C10.6 5.5 11.3 5 12 5C12.7 5 13.4 5.5 13.9 6.2C14.2 6.1 14.6 6 15 6C17.2 6 19 7.8 19 10C19 12.5 17 13 17 13H7Z"/>
+      {/* Brim band */}
+      <rect x="7" y="13" width="10" height="3" rx="1"/>
+      {/* Bottom of hat */}
+      <line x1="8" y1="16" x2="8" y2="18"/>
+      <line x1="16" y1="16" x2="16" y2="18"/>
+      <line x1="8" y1="18" x2="16" y2="18"/>
     </svg>
   );
 }
@@ -148,15 +159,16 @@ function UserBubble({ content }: { content: string }) {
   return (
     <div
       style={{
+        alignSelf: "flex-end",
         backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        padding: "14px 16px",
-        margin: "8px 16px",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-        fontFamily: "'Courier New', monospace",
-        fontSize: 14,
-        color: "#2D2D2D",
-        lineHeight: 1.55,
+        borderRadius: "18px 18px 4px 18px",
+        padding: "12px 16px",
+        maxWidth: "80%",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+        fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
+        fontSize: 15,
+        color: "#1A1A1A",
+        lineHeight: 1.5,
       }}
     >
       {content}
@@ -164,30 +176,63 @@ function UserBubble({ content }: { content: string }) {
   );
 }
 
-function Separator() {
-  return (
-    <hr
-      style={{
-        border: "none",
-        borderTop: "1px solid #E0DAD0",
-        margin: "4px 0",
-      }}
-    />
-  );
-}
+/* AssistantMessage — drips characters via rAF; shows thinking dot while content is empty */
+function AssistantMessage({ content, streaming }: { content: string; streaming?: boolean }) {
+  const [displayed, setDisplayed] = React.useState("");
+  const rafRef  = React.useRef<number | undefined>(undefined);
+  const targetRef = React.useRef(content);
+  const posRef  = React.useRef(0);
 
-function AssistantMessage({ content }: { content: string }) {
+  React.useEffect(() => {
+    targetRef.current = content;
+
+    if (!streaming) {
+      // Stream done — cancel any running RAF and snap to final text
+      if (rafRef.current !== undefined) { cancelAnimationFrame(rafRef.current); rafRef.current = undefined; }
+      setDisplayed(content);
+      posRef.current = content.length;
+      return;
+    }
+
+    // Kick off drip only if not already running
+    if (rafRef.current !== undefined) return;
+
+    const tick = () => {
+      const target = targetRef.current;
+      if (posRef.current < target.length) {
+        // Advance ~3 chars/frame for natural pacing
+        posRef.current = Math.min(posRef.current + 3, target.length);
+        setDisplayed(target.slice(0, posRef.current));
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        rafRef.current = undefined;
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, [content, streaming]);
+
+  React.useEffect(() => {
+    return () => { if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current); };
+  }, []);
+
+  const showDot = streaming && displayed === "";
+
   return (
     <div
       style={{
-        padding: "12px 20px",
-        fontSize: 16,
-        lineHeight: 1.65,
+        alignSelf: "flex-start",
+        maxWidth: "100%",
+        fontSize: 15,
+        lineHeight: 1.7,
         color: "#2D2D2D",
         fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
+        padding: "0 4px",
       }}
     >
-      {parseBold(content)}
+      {showDot
+        ? <span className="cl-thinking-dot" />
+        : <>{renderContent(displayed)}{streaming && <span className="cl-cursor" />}</>
+      }
     </div>
   );
 }
@@ -220,14 +265,22 @@ export function ClaudeMobileUI() {
   const [inputValue, setInputValue] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [showFab, setShowFab] = useState(false);
   const [pending, setPending] = useState(false);
+  const [mode, setMode] = useState<ChatMode>("idle");
+  const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
+  const [emptyStatePhase, setEmptyStatePhase] = useState<"visible" | "fading" | "gone">("visible");
 
   const scrollRef    = useRef<HTMLDivElement>(null);
   const endRef       = useRef<HTMLDivElement>(null);
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const vapiRef      = useRef<Vapi | null>(null);
 
-  const isConversation = messages.length > 0;
-  const isActiveInput  = isConversation || inputFocused;
+  // true when any conversation is active OR messages exist (persists after voice call-end)
+  const isConversation = mode !== "idle" || messages.length > 0;
+  // true only when the text input bar is expanded (NOT during voice mode)
+  const isActiveInput  = inputFocused || mode === "text";
 
   const [keyboardHeight, setKeyboardHeight]   = useState(0);
 
@@ -237,7 +290,6 @@ export function ClaudeMobileUI() {
 
   const [sidebarOpen, setSidebarOpen]         = useState(false);
   const [activeHistoryId, setActiveHistoryId] = useState<number | null>(null);
-  const [voiceActive, setVoiceActive]         = useState(false);
   const weekTriggerRef = useRef<HTMLDivElement>(null);
   const rafRef         = useRef<number | undefined>(undefined);
 
@@ -300,7 +352,9 @@ export function ClaudeMobileUI() {
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 60);
+    const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setIsAtBottom(dist < 100);   // auto-scroll threshold
+    setShowFab(dist > 200);      // FAB threshold
   }, []);
 
   /* auto-scroll on new content or keyboard open/close */
@@ -313,46 +367,169 @@ export function ClaudeMobileUI() {
     if (isActiveInput) textareaRef.current?.focus();
   }, [isActiveInput]);
 
-  /* textarea auto-resize */
+  /* Fade out empty state then unmount — one-way per session */
+  const enterConversation = useCallback(() => {
+    if (emptyStatePhase !== "visible") return;
+    setEmptyStatePhase("fading");
+    setTimeout(() => setEmptyStatePhase("gone"), 220);
+  }, [emptyStatePhase]);
+
+  /* textarea auto-resize — also updates containerRef max-height to exact content */
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = "auto";
     ta.style.height = `${ta.scrollHeight}px`;
+    if (containerRef.current) {
+      containerRef.current.style.maxHeight = `${ta.scrollHeight + 80}px`;
+    }
   }, []);
 
-  /* send */
+  /* Focus: expand container to exact scrollHeight + 80px (action row overhead) */
+  const handleInputFocus = useCallback(() => {
+    setInputFocused(true);
+    const scrollH = textareaRef.current?.scrollHeight ?? 48;
+    if (containerRef.current) {
+      containerRef.current.style.maxHeight = `${scrollH + 80}px`;
+    }
+  }, []);
+
+  /* Blur: collapse container back to pill height */
+  const handleInputBlur = useCallback((isConv: boolean, pend: boolean) => {
+    if (!isConv && !pend) {
+      setInputFocused(false);
+      if (containerRef.current) {
+        containerRef.current.style.maxHeight = "48px";
+      }
+    }
+  }, []);
+
+  /* Vapi instance + all event listeners — created once on mount */
+  useEffect(() => {
+    const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY!);
+    vapiRef.current = vapi;
+
+    vapi.on("speech-start", () => { setIsAgentSpeaking(true); });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vapi.on("message", (msg: any) => {
+      if (msg.type === "transcript") {
+        if (msg.role === "assistant") {
+          // Update the CURRENT assistant bubble in real-time as words stream in
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant" && last?.streaming) {
+              return [...prev.slice(0, -1), { ...last, content: msg.transcript }];
+            }
+            return [...prev, { role: "assistant", content: msg.transcript, streaming: true }];
+          });
+        }
+        if (msg.role === "user" && msg.transcriptType === "final") {
+          setMessages(prev => [...prev, { role: "user", content: msg.transcript }]);
+        }
+      }
+    });
+
+    vapi.on("speech-end", () => {
+      setIsAgentSpeaking(false);
+      // Mark last assistant message as no longer streaming
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.streaming) return [...prev.slice(0, -1), { ...last, streaming: false }];
+        return prev;
+      });
+    });
+
+    vapi.on("call-end", () => { setMode("idle"); });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vapi.on("error", (e: any) => { console.error("Vapi error:", e); });
+
+    return () => { vapi.removeAllListeners(); };
+  }, []);
+
+  /* Voice: start call */
+  const handleVoiceStart = async () => {
+    enterConversation();
+    setMode("voice");
+    // Pass assistant ID as string — Vapi.start(string) routes to the given assistant
+    await vapiRef.current?.start(process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID);
+  };
+
+  /* Voice: end call */
+  const handleVoiceStop = () => { vapiRef.current?.stop(); };
+
+  /* Text: send message with streaming response */
   async function sendMessage() {
     const text = inputValue.trim();
     if (!text || pending) return;
     setInputValue("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    const next: Message[] = [...messages, { role: "user", content: text }];
-    setMessages(next);
+    if (mode === "idle") {
+      enterConversation();
+      setMode("text");
+    }
+
+    const userMsg: Message = { role: "user", content: text };
+    setMessages(prev => [...prev, userMsg]);
     setIsAtBottom(true);
     setPending(true);
 
+    // Add empty streaming assistant placeholder
+    setMessages(prev => [...prev, { role: "assistant", content: "", streaming: true }]);
+
     try {
-      const res  = await fetch("/api/chat", {
+      // TODO: replace with real backend endpoint
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: [...messages, userMsg], selectedWeek: weekOptions[selectedWeekIdx] }),
       });
-      const data = (await res.json()) as { reply?: string; error?: string };
-      setMessages((prev: Message[]) => [...prev, { role: "assistant", content: data.reply ?? data.error ?? "…" }]);
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.streaming) {
+            return [...prev.slice(0, -1), { ...last, content: last.content + chunk }];
+          }
+          return prev;
+        });
+      }
     } catch {
-      setMessages((prev: Message[]) => [...prev, { role: "assistant", content: "Something went wrong." }]);
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.streaming) {
+          return [...prev.slice(0, -1), { ...last, content: "Something went wrong.", streaming: false }];
+        }
+        return [...prev, { role: "assistant", content: "Something went wrong." }];
+      });
     } finally {
+      // Mark streaming done
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.streaming) return [...prev.slice(0, -1), { ...last, streaming: false }];
+        return prev;
+      });
       setPending(false);
     }
   }
 
   function resetConversation() {
+    vapiRef.current?.stop();
     setMessages([]);
     setInputValue("");
     setPending(false);
     setInputFocused(false);
+    setMode("idle");
+    setIsAgentSpeaking(false);
+    setEmptyStatePhase("visible");
+    setShowFab(false);
   }
 
   return (
@@ -360,6 +537,76 @@ export function ClaudeMobileUI() {
       <style>{`
         .claude-textarea::placeholder { color: #AAAAAA; }
         .claude-pill-input::placeholder { color: #9B9B9B; }
+
+        /* ── Thinking dot (breathe animation while LLM is responding) ── */
+        @keyframes cl-breathe {
+          0%, 100% { transform: scale(1); opacity: 0.4; }
+          50%       { transform: scale(1.5); opacity: 1; }
+        }
+        .cl-thinking-dot {
+          display: block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #C96A4A;
+          margin: 4px 0;
+          animation: cl-breathe 1.2s ease-in-out infinite;
+        }
+
+        /* ── Streaming cursor — solid 2px bar ── */
+        @keyframes cl-cursor-blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+        .cl-cursor {
+          display: inline-block;
+          width: 2px;
+          height: 1em;
+          background: #2D2D2D;
+          margin-left: 2px;
+          vertical-align: text-bottom;
+          animation: cl-cursor-blink 0.8s step-end infinite;
+        }
+
+        /* ── Message list inner — flex column, centred, generous gaps ── */
+        .cl-msgs-inner {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 24px 20px;
+          max-width: 680px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        /* ── Exchange separator between conversation turns ── */
+        .cl-ex-sep {
+          height: 1px;
+          background: #EAE5DC;
+          margin: 8px 0;
+          flex-shrink: 0;
+        }
+
+        /* ── Scroll-to-bottom FAB entrance ── */
+        @keyframes cl-fab-in {
+          from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .cl-fab {
+          animation: cl-fab-in 0.2s ease forwards;
+        }
+
+        /* ── Empty state: fade-out on conversation start ── */
+        .cl-empty {
+          opacity: 1;
+          transform: translateY(0);
+          transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .cl-empty.fading {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
 
         /* ── Overscroll bounce fix: prevent rubber-band gap ── */
         html, body {
@@ -405,27 +652,27 @@ export function ClaudeMobileUI() {
           overflow: hidden;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           border-radius: 999px;
-          max-height: 60px;
-          transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          max-height: 48px;
+          transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                      border-radius 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+          will-change: max-height, border-radius;
         }
         .cl-ir {
           display: flex;
           align-items: center;
-          padding: 10px 8px 10px 16px;
+          padding: 4px 8px 4px 16px;
           gap: 8px;
-          max-height: 60px;
-          overflow: hidden;
-          transition: max-height 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                      opacity 0.15s ease;
+          opacity: 1;
+          transition: opacity 0.15s ease;
         }
         .cl-ie {
-          max-height: 0;
+          /* No max-height transition — parent .cl-ic controls height */
           overflow: hidden;
           opacity: 0;
           pointer-events: none;
-          transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      opacity 0.2s ease 0.05s;
+          transform: translateY(4px);
+          /* Only opacity + transform — compositor-safe only */
+          transition: opacity 0.2s ease 0.05s, transform 0.2s ease 0.05s;
         }
         .cl-ia {
           display: flex;
@@ -433,26 +680,32 @@ export function ClaudeMobileUI() {
           justify-content: space-between;
           margin-top: 10px;
           opacity: 0;
-          transform: translateY(8px);
-          transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s;
+          transform: translateY(4px);
+          /* Delay 0.12s — fades in only after container finishes expanding */
+          transition: opacity 0.2s ease 0.12s, transform 0.2s ease 0.12s;
         }
 
         /* ── Input bar: active / expanded — inner elements only ── */
         .cl-iw-on .cl-ic {
           border-radius: 20px;
-          max-height: 300px;
           border-top: 1px solid #E5E0D8;
+          /* max-height set via containerRef JS — no static value here */
         }
         .cl-iw-on .cl-ir {
-          max-height: 0;
-          padding: 0;
+          /* Fade out first (0.15s), then snap height away (no jitter: not transitioning) */
           opacity: 0;
+          height: 0;
+          padding: 0;
+          overflow: hidden;
           pointer-events: none;
+          transition: opacity 0.15s ease,
+                      height 0s linear 0.15s,
+                      padding 0s linear 0.15s;
         }
         .cl-iw-on .cl-ie {
-          max-height: 280px;
           opacity: 1;
           pointer-events: auto;
+          transform: translateY(0);
           padding: 14px 16px;
         }
         .cl-iw-on .cl-ia {
@@ -530,7 +783,7 @@ export function ClaudeMobileUI() {
             padding-right: 24px !important;
             padding-bottom: 10px !important;
             padding-left: 24px !important;
-            z-index: 300 !important;
+            z-index: 100 !important;
             background-color: #F9F6F1 !important;
             box-sizing: border-box !important;
           }
@@ -600,7 +853,7 @@ export function ClaudeMobileUI() {
           inset: 0;
           background: rgba(0,0,0,0.25);
           backdrop-filter: blur(2px);
-          z-index: 299;
+          z-index: 200;
           opacity: 0;
           pointer-events: none;
           transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -645,7 +898,8 @@ export function ClaudeMobileUI() {
           padding: 14px 20px;
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-start;
+          gap: 10px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           cursor: pointer;
           border: none;
@@ -868,13 +1122,13 @@ export function ClaudeMobileUI() {
           )}
         </nav>
 
-        {/* ── Empty state ──────────────────────────────────────── */}
-        {!isConversation && (
+        {/* ── Empty state — fades out on first interaction, never remounts ── */}
+        {emptyStatePhase !== "gone" && (
           <div
-            className="cl-empty"
+            className={`cl-empty${emptyStatePhase === "fading" ? " fading" : ""}`}
             style={{
               height: typeof window !== "undefined"
-                ? Math.max(200, window.innerHeight - keyboardHeight - 60 - 140) /* 60=navbar, 140=input group height */
+                ? Math.max(200, window.innerHeight - keyboardHeight - 60 - 140) /* 60=navbar, 140=input group */
                 : undefined,
               flex: typeof window !== "undefined" ? undefined : 1,
               display: "flex",
@@ -883,26 +1137,24 @@ export function ClaudeMobileUI() {
               justifyContent: "center",
               paddingLeft: 24,
               paddingRight: 24,
-              transition: "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               boxSizing: "border-box",
             }}
           >
             <h1
               style={{
                 fontFamily: "'Tiempos Text', Georgia, 'Times New Roman', serif",
-                fontSize: "clamp(18px, 3vw, 32px)",
+                fontSize: 28,
                 fontWeight: 600,
                 color: "#2D2D2D",
                 textAlign: "center",
                 lineHeight: 1.15,
-                whiteSpace: "nowrap",
                 width: "100%",
                 marginTop: 0,
                 marginBottom: 0,
                 letterSpacing: "-0.01em",
               }}
             >
-              Hi chef, Ready to create schedule?
+              Hi chef, ready to create schedule?
             </h1>
           </div>
         )}
@@ -922,45 +1174,43 @@ export function ClaudeMobileUI() {
           >
             <div className="cl-msgs-inner">
               {messages.map((msg: Message, i: number) => {
-                const prev = messages[i - 1];
+                // Divider between exchanges: before every user message except the first
+                const isNewExchange = msg.role === "user" && i > 0;
                 return (
-                  <div key={i}>
+                  <React.Fragment key={i}>
+                    {isNewExchange && <div className="cl-ex-sep" />}
                     {msg.role === "user" && <UserBubble content={msg.content} />}
-                    {msg.role === "assistant" && prev?.role === "user" && <Separator />}
-                    {msg.role === "assistant" && <AssistantMessage content={msg.content} />}
-                  </div>
+                    {msg.role === "assistant" && (
+                      <AssistantMessage content={msg.content} streaming={msg.streaming} />
+                    )}
+                  </React.Fragment>
                 );
               })}
-
-              {pending && (
-                <div>
-                  <Separator />
-                  <AssistantMessage content="…" />
-                </div>
-              )}
 
               <div ref={endRef} />
             </div>
           </div>
         )}
 
-        {/* ── Scroll-to-bottom button ──────────────────────────── */}
-        {isConversation && !isAtBottom && !isActiveInput && (
+        {/* ── Scroll-to-bottom FAB — appears when >200px from bottom ─── */}
+        {isConversation && showFab && (
           <button
             type="button"
             onClick={scrollToBottom}
             aria-label="Scroll to bottom"
+            className="cl-fab"
             style={{
               ...BTN,
               position: "fixed",
               bottom: 140,
               left: "50%",
               transform: "translateX(-50%)",
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               borderRadius: "50%",
-              backgroundColor: "rgba(255,255,255,0.92)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E5E0D8",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
               zIndex: 20,
             }}
           >
@@ -971,9 +1221,9 @@ export function ClaudeMobileUI() {
         {/* ── Input group: chat bar + voice bar ───────────────── */}
         <div className="cl-ig">
 
-        {/* Chat input bar */}
-        <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}>
-          <div className="cl-ic">
+        {/* Chat input bar — hidden during voice mode */}
+        {mode !== "voice" && <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}>
+          <div className="cl-ic" ref={containerRef}>
 
             {/* Pill row — visible when idle */}
             <div className="cl-ir">
@@ -985,7 +1235,7 @@ export function ClaudeMobileUI() {
                 type="text"
                 value={inputValue}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
-                onFocus={() => setInputFocused(true)}
+                onFocus={handleInputFocus}
                 onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") void sendMessage(); }}
                 placeholder="Chat with scheduled.ai"
                 style={{
@@ -999,7 +1249,7 @@ export function ClaudeMobileUI() {
               </button>
               <button
                 type="button" aria-label="Send" onClick={() => void sendMessage()}
-                style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#000" }}
+                style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#C96A4A" }}
               >
                 <WaveformIcon />
               </button>
@@ -1014,8 +1264,8 @@ export function ClaudeMobileUI() {
                 rows={1}
                 placeholder="Reply to scheduled.ai"
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => { setInputValue(e.target.value); autoResize(); }}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => { if (!isConversation && !pending) setInputFocused(false); }}
+                onFocus={handleInputFocus}
+                onBlur={() => handleInputBlur(isConversation, pending)}
                 onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); }
                 }}
@@ -1037,7 +1287,7 @@ export function ClaudeMobileUI() {
                   </button>
                   <button
                     type="button" aria-label="Send" onClick={() => void sendMessage()}
-                    style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#1A1A1A" }}
+                    style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#C96A4A" }}
                   >
                     <WaveformIcon />
                   </button>
@@ -1046,28 +1296,27 @@ export function ClaudeMobileUI() {
             </div>
 
           </div>
-        </div>{/* end .cl-iw */}
+        </div>}{/* end .cl-iw */}
 
-        {/* Voice AI entry button */}
+        {/* Voice button — visible in idle+voice; hidden only during text mode */}
         <div className={`cl-vb-wrap${isActiveInput ? " hidden" : ""}`}>
           <button
             type="button"
-            className={`cl-vb${voiceActive ? " active" : ""}`}
-            onClick={() => {
-              // TODO: connect to Vapi voice agent
-              setVoiceActive((v) => !v);
-            }}
+            className={`cl-vb${mode === "voice" ? " active" : ""}`}
+            onClick={mode === "voice" ? handleVoiceStop : () => void handleVoiceStart()}
           >
-            <MicOutlineIcon white={voiceActive} />
+            <MicOutlineIcon white={mode === "voice"} />
             <span style={{
               fontSize: 15, fontWeight: 500,
-              color: voiceActive ? "#FFFFFF" : "#6B6259",
+              color: mode === "voice" ? "#FFFFFF" : "#6B6259",
               fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
-              flex: 1, textAlign: "center", margin: "0 12px",
             }}>
-              {voiceActive ? "Listening..." : "Voice chat with scheduled.ai"}
+              {mode === "voice" ? "Tap to end call" : "Talk to scheduled.ai"}
             </span>
-            {voiceActive ? <WaveformBarsIcon /> : <div className="cl-vb-dot" />}
+            {mode === "voice"
+              ? (isAgentSpeaking ? <WaveformBarsIcon /> : <MicOutlineIcon white />)
+              : <div className="cl-vb-dot" />
+            }
           </button>
         </div>
 
