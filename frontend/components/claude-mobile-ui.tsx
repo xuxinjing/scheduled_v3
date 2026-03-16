@@ -57,15 +57,8 @@ function ChevronDownTitleIcon() {
 
 function GhostIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {/* Puffy toque top */}
-      <path d="M7 13C7 13 5 12.5 5 10C5 7.8 6.8 6 9 6C9.4 6 9.8 6.1 10.1 6.2C10.6 5.5 11.3 5 12 5C12.7 5 13.4 5.5 13.9 6.2C14.2 6.1 14.6 6 15 6C17.2 6 19 7.8 19 10C19 12.5 17 13 17 13H7Z"/>
-      {/* Brim band */}
-      <rect x="7" y="13" width="10" height="3" rx="1"/>
-      {/* Bottom of hat */}
-      <line x1="8" y1="16" x2="8" y2="18"/>
-      <line x1="16" y1="16" x2="16" y2="18"/>
-      <line x1="8" y1="18" x2="16" y2="18"/>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 10h.01M15 10h.01M12 2C6.48 2 2 6.48 2 12v9l3-3 3 3 3-3 3 3 3-3v-9c0-5.52-4.48-10-10-10z"/>
     </svg>
   );
 }
@@ -127,12 +120,14 @@ function MicOutlineIcon({ white }: { white?: boolean }) {
     </svg>
   );
 }
-function WaveformBarsIcon() {
+function SoundwaveIcon() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-      <div className="vb-bar vb-bar-1" />
-      <div className="vb-bar vb-bar-2" />
-      <div className="vb-bar vb-bar-3" />
+    <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+      <div className="sw-bar sw-bar-1" />
+      <div className="sw-bar sw-bar-2" />
+      <div className="sw-bar sw-bar-3" />
+      <div className="sw-bar sw-bar-4" />
+      <div className="sw-bar sw-bar-5" />
     </div>
   );
 }
@@ -654,8 +649,19 @@ export function ClaudeMobileUI() {
           border-radius: 999px;
           max-height: 48px;
           transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-                      border-radius 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+                      border-radius 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                      box-shadow 0.15s ease,
+                      transform 0.15s ease;
           will-change: max-height, border-radius;
+        }
+        /* Idle pill hover/press — only when not expanded */
+        .cl-iw:not(.cl-iw-on) .cl-ic:hover {
+          box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+          transform: translateY(-1px);
+        }
+        .cl-iw:not(.cl-iw-on) .cl-ic:active {
+          transform: translateY(0px);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
         .cl-ir {
           display: flex;
@@ -876,7 +882,7 @@ export function ClaudeMobileUI() {
           padding-left: 17px;
         }
 
-        /* ── Input group: stacks chat bar + voice bar ── */
+        /* ── Input group: voice bar pinned at bottom, chat expands upward ── */
         .cl-ig {
           position: fixed;
           bottom: calc(env(safe-area-inset-bottom) + 12px);
@@ -887,7 +893,7 @@ export function ClaudeMobileUI() {
           will-change: transform;
           transform: translateY(calc(-1 * var(--kb, 0px)));
           display: flex;
-          flex-direction: column;
+          flex-direction: column-reverse;
           gap: 10px;
         }
 
@@ -898,14 +904,13 @@ export function ClaudeMobileUI() {
           padding: 14px 20px;
           display: flex;
           align-items: center;
-          justify-content: flex-start;
-          gap: 10px;
+          justify-content: space-between;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           cursor: pointer;
           border: none;
           width: 100%;
           box-sizing: border-box;
-          transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+          transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
                       transform 0.15s ease,
                       opacity 0.2s ease;
         }
@@ -940,20 +945,23 @@ export function ClaudeMobileUI() {
           flex-shrink: 0;
         }
 
-        /* Waveform bars (active state) */
-        @keyframes cl-wave {
-          0%, 100% { height: 6px; }
-          50%       { height: 16px; }
+        /* 5-bar soundwave (voice active state) */
+        @keyframes soundwave {
+          0%, 100% { height: 4px; }
+          50%       { height: 18px; }
         }
-        .vb-bar {
+        .sw-bar {
           width: 3px;
           border-radius: 2px;
           background: #FFFFFF;
-          animation: cl-wave 0.8s ease-in-out infinite;
+          animation: soundwave 0.9s ease-in-out infinite;
+          flex-shrink: 0;
         }
-        .vb-bar-1 { animation-delay: 0s; }
-        .vb-bar-2 { animation-delay: 0.15s; }
-        .vb-bar-3 { animation-delay: 0.3s; }
+        .sw-bar-1 { animation-delay: 0s; }
+        .sw-bar-2 { animation-delay: 0.1s; }
+        .sw-bar-3 { animation-delay: 0.2s; }
+        .sw-bar-4 { animation-delay: 0.1s; }
+        .sw-bar-5 { animation-delay: 0s; }
       `}</style>
 
       {/* ── Sidebar backdrop ──────────────────────────────────────── */}
@@ -1303,20 +1311,23 @@ export function ClaudeMobileUI() {
           <button
             type="button"
             className={`cl-vb${mode === "voice" ? " active" : ""}`}
-            onClick={mode === "voice" ? handleVoiceStop : () => void handleVoiceStart()}
+            onClick={mode === "voice"
+              ? () => { handleVoiceStop(); textareaRef.current?.focus(); }
+              : () => void handleVoiceStart()}
           >
-            <MicOutlineIcon white={mode === "voice"} />
-            <span style={{
-              fontSize: 15, fontWeight: 500,
-              color: mode === "voice" ? "#FFFFFF" : "#6B6259",
-              fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
-            }}>
-              {mode === "voice" ? "Tap to end call" : "Talk to scheduled.ai"}
-            </span>
-            {mode === "voice"
-              ? (isAgentSpeaking ? <WaveformBarsIcon /> : <MicOutlineIcon white />)
-              : <div className="cl-vb-dot" />
-            }
+            {/* Left: mic icon + label */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <MicOutlineIcon white={mode === "voice"} />
+              <span style={{
+                fontSize: 15, fontWeight: 500,
+                color: mode === "voice" ? "#FFFFFF" : "#6B6259",
+                fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
+              }}>
+                {mode === "voice" ? "Listening..." : "Talk to scheduled.ai"}
+              </span>
+            </div>
+            {/* Right: soundwave when active, coral dot when idle */}
+            {mode === "voice" ? <SoundwaveIcon /> : <div className="cl-vb-dot" />}
           </button>
         </div>
 
