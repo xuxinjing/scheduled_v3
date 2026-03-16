@@ -110,6 +110,27 @@ function ChevronDownScrollIcon() {
   );
 }
 
+function MicOutlineIcon({ white }: { white?: boolean }) {
+  const c = white ? "#FFFFFF" : "#8A7F74";
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+      <line x1="9" y1="21" x2="15" y2="21" />
+    </svg>
+  );
+}
+function WaveformBarsIcon() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+      <div className="vb-bar vb-bar-1" />
+      <div className="vb-bar vb-bar-2" />
+      <div className="vb-bar vb-bar-3" />
+    </div>
+  );
+}
+
 function PencilIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C96A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -221,7 +242,9 @@ export function ClaudeMobileUI() {
 
   const [sidebarOpen, setSidebarOpen]         = useState(false);
   const [activeHistoryId, setActiveHistoryId] = useState<number | null>(null);
+  const [voiceActive, setVoiceActive]         = useState(false);
   const weekTriggerRef = useRef<HTMLDivElement>(null);
+  const rafRef         = useRef<number | undefined>(undefined);
 
   // 8 weeks: current week's Monday + 7 future weeks
   const weekOptions: string[] = (() => {
@@ -250,19 +273,27 @@ export function ClaudeMobileUI() {
     setWeekOpen((v: boolean) => !v);
   }
 
-  /* iOS Safari visual viewport — push input bar above keyboard */
+  /* iOS Safari visual viewport — push input bar above keyboard.
+     rAF-debounced so keyboard animation frames don't trigger React re-renders;
+     CSS var --kb drives the input bar transform (GPU, no layout recalc). */
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
     const handleResize = () => {
-      const offset = window.innerHeight - viewport.height - viewport.offsetTop;
-      setKeyboardHeight(offset > 0 ? offset : 0);
+      if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const offset = window.innerHeight - viewport.height - viewport.offsetTop;
+        const next = offset > 0 ? offset : 0;
+        document.documentElement.style.setProperty("--kb", `${next}px`);
+        setKeyboardHeight(next);
+      });
     };
     viewport.addEventListener("resize", handleResize);
     viewport.addEventListener("scroll", handleResize);
     return () => {
       viewport.removeEventListener("resize", handleResize);
       viewport.removeEventListener("scroll", handleResize);
+      if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
@@ -369,23 +400,19 @@ export function ClaudeMobileUI() {
         .cl-empty { padding-top: calc(60px + env(safe-area-inset-top)); }
         .cl-msgs  { padding-top: calc(60px + env(safe-area-inset-top)); }
 
-        /* ── Input bar: idle (pill) ── */
+        /* ── Input bar outer — block child of .cl-ig ── */
         .cl-iw {
-          position: sticky;
-          bottom: calc(env(safe-area-inset-bottom) + 12px);
-          margin: 0 12px 0;
-          z-index: 10;
+          /* positioned by .cl-ig parent */
         }
+        /* ── Input bar inner — only max-height and border-radius animate ── */
         .cl-ic {
           background: #FFFFFF;
           overflow: hidden;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           border-radius: 999px;
           max-height: 60px;
-          transition: border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cl-ir {
           display: flex;
@@ -395,8 +422,7 @@ export function ClaudeMobileUI() {
           max-height: 60px;
           overflow: hidden;
           transition: max-height 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                      opacity 0.15s ease,
-                      padding 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                      opacity 0.15s ease;
         }
         .cl-ie {
           max-height: 0;
@@ -416,14 +442,7 @@ export function ClaudeMobileUI() {
           transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s;
         }
 
-        /* ── Input bar: active / expanded ── */
-        .cl-iw-on {
-          position: fixed;
-          bottom: 12px;
-          left: 12px;
-          right: 12px;
-          margin: 0;
-        }
+        /* ── Input bar: active / expanded — inner elements only ── */
         .cl-iw-on .cl-ic {
           border-radius: 20px;
           max-height: 300px;
@@ -533,16 +552,13 @@ export function ClaudeMobileUI() {
             box-sizing: border-box;
           }
 
-          /* Input bar: centered, wider desktop max-width */
-          .cl-iw,
-          .cl-iw-on {
-            position: fixed !important;
-            bottom: 16px !important;
+          /* Input group: centered on desktop */
+          .cl-ig {
             left: 50% !important;
-            transform: translateX(-50%) !important;
-            width: min(680px, calc(100vw - 48px)) !important;
-            margin: 0 !important;
             right: auto !important;
+            bottom: 16px !important;
+            transform: translateX(-50%) translateY(calc(-1 * var(--kb, 0px))) !important;
+            width: min(680px, calc(100vw - 48px)) !important;
           }
 
           /* Sidebar: absolute within the full-width column */
@@ -605,6 +621,84 @@ export function ClaudeMobileUI() {
           border-left: 3px solid #C96A4A;
           padding-left: 17px;
         }
+
+        /* ── Input group: stacks chat bar + voice bar ── */
+        .cl-ig {
+          position: fixed;
+          bottom: calc(env(safe-area-inset-bottom) + 12px);
+          left: 12px;
+          right: 12px;
+          margin: 0;
+          z-index: 10;
+          will-change: transform;
+          transform: translateY(calc(-1 * var(--kb, 0px)));
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        /* ── Voice button ── */
+        .cl-vb {
+          background: #E8E0D4;
+          border-radius: 999px;
+          padding: 14px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+          cursor: pointer;
+          border: none;
+          width: 100%;
+          box-sizing: border-box;
+          transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      transform 0.15s ease,
+                      opacity 0.2s ease;
+        }
+        .cl-vb:hover { background: #DDD5C8; transform: scale(0.98); }
+        .cl-vb.active { background: #2D2D2D; }
+        .cl-vb.active:hover { background: #3A3A3A; }
+
+        /* Hide voice button when chat input is expanded */
+        .cl-vb-wrap {
+          opacity: 1;
+          transform: translateY(0);
+          transition: opacity 0.2s ease, transform 0.2s ease;
+          pointer-events: auto;
+        }
+        .cl-vb-wrap.hidden {
+          opacity: 0;
+          transform: translateY(8px);
+          pointer-events: none;
+        }
+
+        /* Coral pulse dot */
+        @keyframes cl-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.5; transform: scale(0.85); }
+        }
+        .cl-vb-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #C96A4A;
+          animation: cl-pulse 2s ease-in-out infinite;
+          flex-shrink: 0;
+        }
+
+        /* Waveform bars (active state) */
+        @keyframes cl-wave {
+          0%, 100% { height: 6px; }
+          50%       { height: 16px; }
+        }
+        .vb-bar {
+          width: 3px;
+          border-radius: 2px;
+          background: #FFFFFF;
+          animation: cl-wave 0.8s ease-in-out infinite;
+        }
+        .vb-bar-1 { animation-delay: 0s; }
+        .vb-bar-2 { animation-delay: 0.15s; }
+        .vb-bar-3 { animation-delay: 0.3s; }
       `}</style>
 
       {/* ── Sidebar backdrop ──────────────────────────────────────── */}
@@ -779,7 +873,7 @@ export function ClaudeMobileUI() {
             className="cl-empty"
             style={{
               height: typeof window !== "undefined"
-                ? Math.max(200, window.innerHeight - keyboardHeight - 60 - 80)
+                ? Math.max(200, window.innerHeight - keyboardHeight - 60 - 140) /* 60=navbar, 140=input group height */
                 : undefined,
               flex: typeof window !== "undefined" ? undefined : 1,
               display: "flex",
@@ -821,7 +915,7 @@ export function ClaudeMobileUI() {
               flex: 1,
               overflowY: "auto",
               paddingTop: 4,
-              paddingBottom: 130 + keyboardHeight,
+              paddingBottom: 185 + keyboardHeight, /* chat bar ~60px + gap 10px + voice bar ~56px + 12px bottom + extra */
             }}
           >
             <div className="cl-msgs-inner">
@@ -872,11 +966,11 @@ export function ClaudeMobileUI() {
           </button>
         )}
 
-        {/* ── Unified input bar ────────────────────────────────── */}
-        <div
-          className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}
-          style={isActiveInput ? { bottom: `${keyboardHeight + 12}px` } : undefined}
-        >
+        {/* ── Input group: chat bar + voice bar ───────────────── */}
+        <div className="cl-ig">
+
+        {/* Chat input bar */}
+        <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}>
           <div className="cl-ic">
 
             {/* Pill row — visible when idle */}
@@ -950,7 +1044,32 @@ export function ClaudeMobileUI() {
             </div>
 
           </div>
+        </div>{/* end .cl-iw */}
+
+        {/* Voice AI entry button */}
+        <div className={`cl-vb-wrap${isActiveInput ? " hidden" : ""}`}>
+          <button
+            type="button"
+            className={`cl-vb${voiceActive ? " active" : ""}`}
+            onClick={() => {
+              // TODO: connect to Vapi voice agent
+              setVoiceActive((v) => !v);
+            }}
+          >
+            <MicOutlineIcon white={voiceActive} />
+            <span style={{
+              fontSize: 15, fontWeight: 500,
+              color: voiceActive ? "#FFFFFF" : "#6B6259",
+              fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
+              flex: 1, textAlign: "center", margin: "0 12px",
+            }}>
+              {voiceActive ? "Listening..." : "Voice chat with scheduled.ai"}
+            </span>
+            {voiceActive ? <WaveformBarsIcon /> : <div className="cl-vb-dot" />}
+          </button>
         </div>
+
+        </div>{/* end .cl-ig */}
       </div>
     </>
   );
