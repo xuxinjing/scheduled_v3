@@ -297,3 +297,11 @@ textarea {
   font-weight: 400;
   letter-spacing: -0.01em;
 }
+
+@media (min-width: 768px) {
+  body {
+    display: flex;
+    justify-content: center;
+    background-color: #FFFFFF;
+  }
+}

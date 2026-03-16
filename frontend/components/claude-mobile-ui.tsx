@@ -309,6 +309,8 @@ export function ClaudeMobileUI() {
         /* ── Overscroll bounce fix: prevent rubber-band gap ── */
         html, body {
           overscroll-behavior-y: none;
+        }
+        body {
           background-color: #F9F6F1;
         }
 
@@ -460,6 +462,7 @@ export function ClaudeMobileUI() {
             width: 448px !important;
             max-width: 448px !important;
             margin: 0 auto !important;
+            overflow: hidden !important;
             box-shadow: 0 0 40px rgba(0,0,0,0.08);
           }
 
