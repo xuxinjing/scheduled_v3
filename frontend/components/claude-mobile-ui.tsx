@@ -231,6 +231,7 @@ export function ClaudeMobileUI() {
   const scrollRef    = useRef<HTMLDivElement>(null);
   const endRef       = useRef<HTMLDivElement>(null);
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const isConversation = messages.length > 0;
   const isActiveInput  = isConversation || inputFocused;
@@ -319,12 +320,34 @@ export function ClaudeMobileUI() {
     if (isActiveInput) textareaRef.current?.focus();
   }, [isActiveInput]);
 
-  /* textarea auto-resize */
+  /* textarea auto-resize — also updates containerRef max-height to exact content */
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = "auto";
     ta.style.height = `${ta.scrollHeight}px`;
+    if (containerRef.current) {
+      containerRef.current.style.maxHeight = `${ta.scrollHeight + 80}px`;
+    }
+  }, []);
+
+  /* Focus: expand container to exact scrollHeight + 80px (action row overhead) */
+  const handleInputFocus = useCallback(() => {
+    setInputFocused(true);
+    const scrollH = textareaRef.current?.scrollHeight ?? 48;
+    if (containerRef.current) {
+      containerRef.current.style.maxHeight = `${scrollH + 80}px`;
+    }
+  }, []);
+
+  /* Blur: collapse container back to pill height */
+  const handleInputBlur = useCallback((isConv: boolean, pend: boolean) => {
+    if (!isConv && !pend) {
+      setInputFocused(false);
+      if (containerRef.current) {
+        containerRef.current.style.maxHeight = "48px";
+      }
+    }
   }, []);
 
   /* send */
@@ -411,27 +434,27 @@ export function ClaudeMobileUI() {
           overflow: hidden;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           border-radius: 999px;
-          max-height: 60px;
-          transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          max-height: 48px;
+          transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                      border-radius 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+          will-change: max-height, border-radius;
         }
         .cl-ir {
           display: flex;
           align-items: center;
-          padding: 10px 8px 10px 16px;
+          padding: 4px 8px 4px 16px;
           gap: 8px;
-          max-height: 60px;
-          overflow: hidden;
-          transition: max-height 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                      opacity 0.15s ease;
+          opacity: 1;
+          transition: opacity 0.15s ease;
         }
         .cl-ie {
-          max-height: 0;
+          /* No max-height transition — parent .cl-ic controls height */
           overflow: hidden;
           opacity: 0;
           pointer-events: none;
-          transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                      opacity 0.2s ease 0.05s;
+          transform: translateY(4px);
+          /* Only opacity + transform — compositor-safe only */
+          transition: opacity 0.2s ease 0.05s, transform 0.2s ease 0.05s;
         }
         .cl-ia {
           display: flex;
@@ -439,26 +462,32 @@ export function ClaudeMobileUI() {
           justify-content: space-between;
           margin-top: 10px;
           opacity: 0;
-          transform: translateY(8px);
-          transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s;
+          transform: translateY(4px);
+          /* Delay 0.12s — fades in only after container finishes expanding */
+          transition: opacity 0.2s ease 0.12s, transform 0.2s ease 0.12s;
         }
 
         /* ── Input bar: active / expanded — inner elements only ── */
         .cl-iw-on .cl-ic {
           border-radius: 20px;
-          max-height: 300px;
           border-top: 1px solid #E5E0D8;
+          /* max-height set via containerRef JS — no static value here */
         }
         .cl-iw-on .cl-ir {
-          max-height: 0;
-          padding: 0;
+          /* Fade out first (0.15s), then snap height away (no jitter: not transitioning) */
           opacity: 0;
+          height: 0;
+          padding: 0;
+          overflow: hidden;
           pointer-events: none;
+          transition: opacity 0.15s ease,
+                      height 0s linear 0.15s,
+                      padding 0s linear 0.15s;
         }
         .cl-iw-on .cl-ie {
-          max-height: 280px;
           opacity: 1;
           pointer-events: auto;
+          transform: translateY(0);
           padding: 14px 16px;
         }
         .cl-iw-on .cl-ia {
@@ -651,7 +680,8 @@ export function ClaudeMobileUI() {
           padding: 14px 20px;
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-start;
+          gap: 10px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           cursor: pointer;
           border: none;
@@ -978,7 +1008,7 @@ export function ClaudeMobileUI() {
 
         {/* Chat input bar */}
         <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}>
-          <div className="cl-ic">
+          <div className="cl-ic" ref={containerRef}>
 
             {/* Pill row — visible when idle */}
             <div className="cl-ir">
@@ -990,7 +1020,7 @@ export function ClaudeMobileUI() {
                 type="text"
                 value={inputValue}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
-                onFocus={() => setInputFocused(true)}
+                onFocus={handleInputFocus}
                 onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") void sendMessage(); }}
                 placeholder="Chat with scheduled.ai"
                 style={{
@@ -1004,7 +1034,7 @@ export function ClaudeMobileUI() {
               </button>
               <button
                 type="button" aria-label="Send" onClick={() => void sendMessage()}
-                style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#000" }}
+                style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#C96A4A" }}
               >
                 <WaveformIcon />
               </button>
@@ -1019,8 +1049,8 @@ export function ClaudeMobileUI() {
                 rows={1}
                 placeholder="Reply to scheduled.ai"
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => { setInputValue(e.target.value); autoResize(); }}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => { if (!isConversation && !pending) setInputFocused(false); }}
+                onFocus={handleInputFocus}
+                onBlur={() => handleInputBlur(isConversation, pending)}
                 onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); }
                 }}
@@ -1042,7 +1072,7 @@ export function ClaudeMobileUI() {
                   </button>
                   <button
                     type="button" aria-label="Send" onClick={() => void sendMessage()}
-                    style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#1A1A1A" }}
+                    style={{ ...BTN, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#C96A4A" }}
                   >
                     <WaveformIcon />
                   </button>
@@ -1068,9 +1098,8 @@ export function ClaudeMobileUI() {
               fontSize: 15, fontWeight: 500,
               color: voiceActive ? "#FFFFFF" : "#6B6259",
               fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
-              flex: 1, textAlign: "center", margin: "0 12px",
             }}>
-              {voiceActive ? "Listening..." : "Voice chat with scheduled.ai"}
+              {voiceActive ? "Listening..." : "Talk to scheduled.ai"}
             </span>
             {voiceActive ? <WaveformBarsIcon /> : <div className="cl-vb-dot" />}
           </button>
