@@ -59,29 +59,32 @@ async def solve(request: SolveRequest):
     full_text: list[str] = []
 
     async def generate():
-        with client.messages.stream(
-            model="claude-opus-4-6",
-            max_tokens=4096,
-            system=system_prompt,
-            messages=[{"role": "user", "content": "Generate the complete schedule."}],
-        ) as stream:
-            for text in stream.text_stream:
-                full_text.append(text)
-                payload = json.dumps({"type": "reasoning", "text": text})
-                yield f"data: {payload}\n\n"
+        try:
+            with client.messages.stream(
+                model="claude-opus-4-6",
+                max_tokens=4096,
+                system=system_prompt,
+                messages=[{"role": "user", "content": "Generate the complete schedule."}],
+            ) as stream:
+                for text in stream.text_stream:
+                    full_text.append(text)
+                    event = json.dumps({"type": "reasoning", "text": text})
+                    yield f"data: {event}\n\n"
 
-        # Extract <schedule>…</schedule> JSON block if present
-        combined = "".join(full_text)
-        match = re.search(r"<schedule>(.*?)</schedule>", combined, re.DOTALL)
-        if match:
-            try:
-                schedule_data = json.loads(match.group(1).strip())
-                payload = json.dumps({"type": "schedule", "data": schedule_data})
-                yield f"data: {payload}\n\n"
-            except json.JSONDecodeError:
-                pass
-
-        yield "data: [DONE]\n\n"
+            # Extract <schedule>…</schedule> JSON block if present
+            combined = "".join(full_text)
+            match = re.search(r"<schedule>(.*?)</schedule>", combined, re.DOTALL)
+            if match:
+                try:
+                    schedule_data = json.loads(match.group(1).strip())
+                    event = json.dumps({"type": "schedule", "data": schedule_data})
+                    yield f"data: {event}\n\n"
+                except json.JSONDecodeError:
+                    yield f"data: {json.dumps({'type': 'error', 'text': 'Failed to parse schedule JSON from model response'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'text': str(e)})}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(
         generate(),

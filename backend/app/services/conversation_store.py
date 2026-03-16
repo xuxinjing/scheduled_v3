@@ -45,7 +45,7 @@ def _fmt_date(ts: str) -> str:
             return "Today"
         if delta == 1:
             return "Yesterday"
-        return dt.strftime("%b %-d")
+        return f"{dt.strftime('%b')} {dt.day}"
     except Exception:
         return ""
 
@@ -72,6 +72,23 @@ def get_conversation(conversation_id: str) -> dict | None:
     return None
 
 
+def delete_conversation(conversation_id: str) -> bool:
+    """Delete a conversation by ID. Returns True if found and deleted."""
+
+    def _do_delete() -> bool:
+        existing = _read_all()
+        updated = [r for r in existing if r.get("id") != conversation_id]
+        if len(updated) == len(existing):
+            return False
+        _write_all(updated)
+        return True
+
+    if _HAS_FILELOCK:
+        with FileLock(str(_lock_path())):
+            return _do_delete()
+    return _do_delete()
+
+
 def save_conversation(
     *,
     conversation_id: str | None,
@@ -86,11 +103,14 @@ def save_conversation(
     first_asst = next((m["content"] for m in messages if m.get("role") == "assistant"), "")
     preview = (first_asst[:80] + "…") if len(first_asst) > 80 else first_asst
 
+    now = datetime.now(timezone.utc).isoformat()
+
     record = {
         "id": cid,
         "title": title,
         "preview": preview,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": now,
+        "updated_at": now,
         "selected_week": selected_week,
         "messages": messages,
     }
@@ -100,6 +120,7 @@ def save_conversation(
         # Replace if exists, otherwise prepend
         idx = next((i for i, r in enumerate(existing) if r.get("id") == cid), None)
         if idx is not None:
+            record["created_at"] = existing[idx].get("created_at", now)
             existing[idx] = record
         else:
             existing.insert(0, record)

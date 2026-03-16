@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from ..services.conversation_store import get_conversation, list_conversations
+from ..services.conversation_store import delete_conversation, get_conversation, list_conversations
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -19,3 +19,11 @@ def get_conv(conversation_id: str):
     if conv is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return conv
+
+
+@router.delete("/{conversation_id}")
+def delete_conv(conversation_id: str):
+    deleted = delete_conversation(conversation_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"deleted": conversation_id}

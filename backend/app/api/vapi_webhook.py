@@ -7,6 +7,8 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from ..services.conversation_store import save_conversation
+
 router = APIRouter(prefix="/vapi", tags=["vapi"])
 
 _DATA_DIR = Path(__file__).parent.parent.parent.parent  # repo root
@@ -77,6 +79,23 @@ async def vapi_webhook(request: Request):
             result = handler(parameters)
             return JSONResponse({"result": result})
         return JSONResponse({"result": f"Unknown tool: {name}"})
+
+    # Handle end-of-call transcript saving
+    event_type = body.get("message", {}).get("type") or body.get("type")
+    if event_type == "end-of-call-report":
+        artifact = body.get("message", {}).get("artifact") or body.get("artifact", {})
+        transcript = artifact.get("transcript", "")
+        call_meta = body.get("message", {}).get("call", {}).get("metadata") or body.get("call", {}).get("metadata", {})
+        conversation_id = call_meta.get("conversation_id")
+        selected_week = call_meta.get("selected_week", "")
+        if transcript:
+            messages = [{"role": "user", "content": f"[Voice transcript]\n{transcript}"}]
+            save_conversation(
+                conversation_id=conversation_id,
+                messages=messages,
+                selected_week=selected_week,
+            )
+        return JSONResponse({"result": "transcript saved"})
 
     # Acknowledge other event types (call-start, transcript, etc.)
     return JSONResponse({"result": "ok"})

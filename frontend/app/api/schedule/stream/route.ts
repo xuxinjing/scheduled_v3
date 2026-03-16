@@ -14,6 +14,14 @@ export async function POST(request: Request) {
       cache: "no-store",
     });
 
+    if (!response.ok) {
+      const text = await response.text().catch(() => "Schedule stream failed");
+      return NextResponse.json(
+        { error: text },
+        { status: response.status },
+      );
+    }
+
     if (!response.body) {
       return NextResponse.json({ error: "Backend schedule stream unavailable" }, { status: 502 });
     }

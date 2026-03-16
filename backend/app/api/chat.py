@@ -70,28 +70,31 @@ async def chat(request: ChatRequest):
     collected_response: list[str] = []
 
     async def generate():
-        with client.messages.stream(
-            model="claude-sonnet-4-6",
-            max_tokens=1024,
-            system=system_prompt,
-            messages=msgs,
-        ) as stream:
-            for text in stream.text_stream:
-                collected_response.append(text)
-                # Escape newlines in SSE data field
-                safe = text.replace("\n", "\\n")
-                yield f"data: {safe}\n\n"
+        try:
+            with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=1024,
+                system=system_prompt,
+                messages=msgs,
+            ) as stream:
+                for text in stream.text_stream:
+                    collected_response.append(text)
+                    # Escape newlines in SSE data field
+                    safe = text.replace("\n", "\\n")
+                    yield f"data: {safe}\n\n"
 
-        yield "data: [DONE]\n\n"
-
-        # Persist conversation after stream completes
-        full_reply = "".join(collected_response)
-        all_messages = msgs + [{"role": "assistant", "content": full_reply}]
-        save_conversation(
-            conversation_id=request.conversation_id,
-            messages=all_messages,
-            selected_week=request.selected_week,
-        )
+            # Persist conversation after stream completes
+            full_reply = "".join(collected_response)
+            all_messages = msgs + [{"role": "assistant", "content": full_reply}]
+            save_conversation(
+                conversation_id=request.conversation_id,
+                messages=all_messages,
+                selected_week=request.selected_week,
+            )
+        except Exception as e:
+            yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(
         generate(),
