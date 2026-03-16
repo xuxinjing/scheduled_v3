@@ -918,7 +918,7 @@ export function ClaudeMobileUI() {
           z-index: 100;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 0; /* spacing handled by .cl-vb-wrap margin-top so it can be zeroed on hide */
         }
 
         /* ── Voice button ── */
@@ -944,17 +944,22 @@ export function ClaudeMobileUI() {
 
         /* Hide voice button when chat input is expanded */
         .cl-vb-wrap {
+          /* margin-top replaces the parent gap so it can be zeroed when collapsed */
+          margin-top: 10px;
+          max-height: 70px; /* tall enough for button; collapses to 0 on hide */
+          overflow: hidden;
           opacity: 1;
-          transform: translateY(0);
-          /* 0.1s delay on fade-in so voice button appears after input finishes collapsing */
-          transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s;
           pointer-events: auto;
+          /* 0.1s delay on fade-in: space + opacity open after input finishes collapsing */
+          transition: opacity 0.2s ease 0.1s, max-height 0.25s ease 0.1s, margin-top 0.25s ease 0.1s;
         }
         .cl-vb-wrap.hidden {
           opacity: 0;
+          max-height: 0;    /* removes button from flex flow — no ghost space */
+          margin-top: 0;    /* zeroes the gap too */
           pointer-events: none;
-          /* No delay on hide — disappears immediately when input expands */
-          transition: opacity 0.15s ease, transform 0.15s ease;
+          /* No delay on hide — collapses immediately when input expands */
+          transition: opacity 0.15s ease, max-height 0.2s ease, margin-top 0.2s ease;
         }
 
         /* Coral pulse dot */
