@@ -58,7 +58,11 @@ function ChevronDownTitleIcon() {
 function GhostIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 10h.01M15 10h.01M12 2C6.48 2 2 6.48 2 12v9l3-3 3 3 3-3 3 3 3-3v-9c0-5.52-4.48-10-10-10z"/>
+      {/* Dome head + body with two bumps at hem */}
+      <path d="M12 3C8.13 3 5 6.13 5 10v8l2.5-2 2.5 2 2.5-2 2.5 2 2.5-2V10c0-3.87-3.13-7-7-7z"/>
+      {/* Eyes */}
+      <circle cx="9.5" cy="10.5" r="0.8" fill="#444" stroke="none"/>
+      <circle cx="14.5" cy="10.5" r="0.8" fill="#444" stroke="none"/>
     </svg>
   );
 }
@@ -450,8 +454,11 @@ export function ClaudeMobileUI() {
     await vapiRef.current?.start(process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID);
   };
 
-  /* Voice: end call */
-  const handleVoiceStop = () => { vapiRef.current?.stop(); };
+  /* Voice: end call — set mode immediately for instant UI response */
+  const handleVoiceStop = () => {
+    vapiRef.current?.stop();
+    setMode("idle");
+  };
 
   /* Text: send message with streaming response */
   async function sendMessage() {
@@ -806,12 +813,9 @@ export function ClaudeMobileUI() {
             box-sizing: border-box;
           }
 
-          /* Input group: centered on desktop */
+          /* Input group: desktop fine-tuning only */
           .cl-ig {
-            left: 50% !important;
-            right: auto !important;
             bottom: 16px !important;
-            transform: translateX(-50%) translateY(calc(-1 * var(--kb, 0px))) !important;
             width: min(680px, calc(100vw - 48px)) !important;
           }
 
@@ -882,18 +886,19 @@ export function ClaudeMobileUI() {
           padding-left: 17px;
         }
 
-        /* ── Input group: voice bar pinned at bottom, chat expands upward ── */
+        /* ── Input group: single fixed container, grows upward — never overlaps ── */
         .cl-ig {
           position: fixed;
           bottom: calc(env(safe-area-inset-bottom) + 12px);
-          left: 12px;
-          right: 12px;
-          margin: 0;
+          left: 50%;
+          /* combine centering + keyboard-lift in one transform */
+          transform: translateX(-50%) translateY(calc(-1 * var(--kb, 0px)));
+          width: calc(100% - 32px);
+          max-width: 648px;
           z-index: 10;
           will-change: transform;
-          transform: translateY(calc(-1 * var(--kb, 0px)));
           display: flex;
-          flex-direction: column-reverse;
+          flex-direction: column;
           gap: 10px;
         }
 
@@ -1226,11 +1231,11 @@ export function ClaudeMobileUI() {
           </button>
         )}
 
-        {/* ── Input group: chat bar + voice bar ───────────────── */}
+        {/* ── Input group: single fixed container — chat on top, voice on bottom ── */}
         <div className="cl-ig">
 
-        {/* Chat input bar — hidden during voice mode */}
-        {mode !== "voice" && <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`}>
+        {/* Chat input bar — display:none in voice to preserve typed text */}
+        <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`} style={{ display: mode === "voice" ? "none" : undefined }}>
           <div className="cl-ic" ref={containerRef}>
 
             {/* Pill row — visible when idle */}
@@ -1304,9 +1309,9 @@ export function ClaudeMobileUI() {
             </div>
 
           </div>
-        </div>}{/* end .cl-iw */}
+        </div>{/* end .cl-iw */}
 
-        {/* Voice button — visible in idle+voice; hidden only during text mode */}
+        {/* Voice button — always rendered; fades when text input is active */}
         <div className={`cl-vb-wrap${isActiveInput ? " hidden" : ""}`}>
           <button
             type="button"
@@ -1315,19 +1320,48 @@ export function ClaudeMobileUI() {
               ? () => { handleVoiceStop(); textareaRef.current?.focus(); }
               : () => void handleVoiceStart()}
           >
-            {/* Left: mic icon + label */}
+            {/* Left: mic icon + cross-fading label */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <MicOutlineIcon white={mode === "voice"} />
-              <span style={{
-                fontSize: 15, fontWeight: 500,
-                color: mode === "voice" ? "#FFFFFF" : "#6B6259",
-                fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
-              }}>
-                {mode === "voice" ? "Listening..." : "Talk to scheduled.ai"}
+              {/* Idle label drives layout width; active label overlaps absolutely */}
+              <span style={{ position: "relative", fontSize: 15, fontWeight: 500, fontFamily: "system-ui, -apple-system, 'Inter', sans-serif" }}>
+                <span style={{
+                  display: "block",
+                  color: "#6B6259",
+                  opacity: mode === "voice" ? 0 : 1,
+                  transition: mode === "voice" ? "opacity 0.15s ease" : "opacity 0.2s ease 0.15s",
+                  userSelect: "none",
+                }}>
+                  Talk to scheduled.ai
+                </span>
+                <span style={{
+                  position: "absolute", top: 0, left: 0,
+                  color: "#FFFFFF", whiteSpace: "nowrap",
+                  opacity: mode === "voice" ? 1 : 0,
+                  transition: mode === "voice" ? "opacity 0.2s ease" : "opacity 0.1s ease",
+                  userSelect: "none",
+                }}>
+                  Listening...
+                </span>
               </span>
             </div>
-            {/* Right: soundwave when active, coral dot when idle */}
-            {mode === "voice" ? <SoundwaveIcon /> : <div className="cl-vb-dot" />}
+            {/* Right: soundwave + dot always in DOM, cross-fade via opacity */}
+            <div style={{ position: "relative", width: 27, height: 20, flexShrink: 0 }}>
+              <div style={{
+                position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)",
+                opacity: mode === "voice" ? 1 : 0,
+                transition: mode === "voice" ? "opacity 0.2s ease 0.05s" : "opacity 0.15s ease",
+              }}>
+                <SoundwaveIcon />
+              </div>
+              <div style={{
+                position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)",
+                opacity: mode === "voice" ? 0 : 1,
+                transition: mode === "voice" ? "opacity 0.1s ease" : "opacity 0.2s ease 0.15s",
+              }}>
+                <div className="cl-vb-dot" />
+              </div>
+            </div>
           </button>
         </div>
 
