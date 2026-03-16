@@ -52,9 +52,15 @@ function ChevronDownTitleIcon() {
 
 function GhostIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 10h.01M15 10h.01" />
-      <path d="M12 2a8 8 0 0 1 8 8v10l-4-2-2 2-2-2-2 2-2-2-4 2V10a8 8 0 0 1 8-8z" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {/* Puffy toque top */}
+      <path d="M7 13C7 13 5 12.5 5 10C5 7.8 6.8 6 9 6C9.4 6 9.8 6.1 10.1 6.2C10.6 5.5 11.3 5 12 5C12.7 5 13.4 5.5 13.9 6.2C14.2 6.1 14.6 6 15 6C17.2 6 19 7.8 19 10C19 12.5 17 13 17 13H7Z"/>
+      {/* Brim band */}
+      <rect x="7" y="13" width="10" height="3" rx="1"/>
+      {/* Bottom of hat */}
+      <line x1="8" y1="16" x2="8" y2="18"/>
+      <line x1="16" y1="16" x2="16" y2="18"/>
+      <line x1="8" y1="18" x2="16" y2="18"/>
     </svg>
   );
 }
@@ -890,19 +896,18 @@ export function ClaudeMobileUI() {
             <h1
               style={{
                 fontFamily: "'Tiempos Text', Georgia, 'Times New Roman', serif",
-                fontSize: "clamp(18px, 3vw, 32px)",
+                fontSize: 28,
                 fontWeight: 600,
                 color: "#2D2D2D",
                 textAlign: "center",
                 lineHeight: 1.15,
-                whiteSpace: "nowrap",
                 width: "100%",
                 marginTop: 0,
                 marginBottom: 0,
                 letterSpacing: "-0.01em",
               }}
             >
-              Hi chef, Ready to create schedule?
+              Hi chef, ready to create schedule?
             </h1>
           </div>
         )}
