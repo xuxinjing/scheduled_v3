@@ -321,7 +321,7 @@ export function ClaudeMobileUI() {
 
   /* iOS Safari visual viewport — push input bar above keyboard.
      rAF-debounced so keyboard animation frames don't trigger React re-renders;
-     CSS var --kb drives the input bar transform (GPU, no layout recalc). */
+     CSS var --kb drives the input group's bottom property (layout-based lift). */
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
@@ -815,7 +815,7 @@ export function ClaudeMobileUI() {
 
           /* Input group: desktop fine-tuning only */
           .cl-ig {
-            bottom: 16px !important;
+            bottom: calc(16px + var(--kb, 0px)) !important;
             width: min(680px, calc(100vw - 48px)) !important;
           }
 
@@ -889,14 +889,13 @@ export function ClaudeMobileUI() {
         /* ── Input group: single fixed container, grows upward — never overlaps ── */
         .cl-ig {
           position: fixed;
-          bottom: calc(env(safe-area-inset-bottom) + 12px);
+          /* keyboard lift via bottom (layout property) — not transform */
+          bottom: calc(env(safe-area-inset-bottom) + 12px + var(--kb, 0px));
           left: 50%;
-          /* combine centering + keyboard-lift in one transform */
-          transform: translateX(-50%) translateY(calc(-1 * var(--kb, 0px)));
+          transform: translateX(-50%);
           width: calc(100% - 32px);
           max-width: 648px;
-          z-index: 10;
-          will-change: transform;
+          z-index: 100;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -932,7 +931,6 @@ export function ClaudeMobileUI() {
         }
         .cl-vb-wrap.hidden {
           opacity: 0;
-          transform: translateY(8px);
           pointer-events: none;
         }
 
