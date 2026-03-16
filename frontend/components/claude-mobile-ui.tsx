@@ -3,6 +3,15 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type Message = { role: "user" | "assistant"; content: string };
+type HistoryItem = { id: number; title: string; preview: string; date: string };
+
+const mockHistory: HistoryItem[] = [
+  { id: 1, title: "Week of 03/16 schedule", preview: "Jorge has Sunday off...", date: "Today" },
+  { id: 2, title: "Week of 03/09 schedule", preview: "Updated Maria's shifts...", date: "Yesterday" },
+  { id: 3, title: "Week of 03/02 schedule", preview: "Holiday coverage plan", date: "Mar 2" },
+  { id: 4, title: "Staff availability check", preview: "Who can cover Friday?", date: "Feb 28" },
+  { id: 5, title: "Week of 02/23 schedule", preview: "Full crew except Tuesday", date: "Feb 23" },
+];
 
 /* ── inline bold: **text** → <strong> ─────────────────────────── */
 function parseBold(text: string) {
@@ -101,6 +110,23 @@ function ChevronDownScrollIcon() {
   );
 }
 
+function PencilIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C96A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+function GearIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
 /* ── Message sub-components ────────────────────────────────────── */
 function UserBubble({ content }: { content: string }) {
   return (
@@ -192,6 +218,9 @@ export function ClaudeMobileUI() {
   const [weekOpen, setWeekOpen]               = useState(false);
   const [selectedWeekIdx, setSelectedWeekIdx] = useState(1); // default: next Monday
   const [ddCoords, setDdCoords]               = useState({ top: 0, left: 0 });
+
+  const [sidebarOpen, setSidebarOpen]         = useState(false);
+  const [activeHistoryId, setActiveHistoryId] = useState<number | null>(null);
   const weekTriggerRef = useRef<HTMLDivElement>(null);
 
   // 8 weeks: current week's Monday + 7 future weeks
@@ -501,8 +530,112 @@ export function ClaudeMobileUI() {
             margin: 0 !important;
             right: auto !important;
           }
+
+          /* Desktop: sidebar left edge aligns with phone column left edge */
+          .cl-sb {
+            left: calc(50% - 224px) !important;
+          }
+        }
+
+        /* ── History sidebar ── */
+        .cl-sb {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 300px;
+          height: 100vh;
+          background: #FFFFFF;
+          z-index: 300;
+          box-shadow: 4px 0 24px rgba(0,0,0,0.10);
+          border-radius: 0 24px 24px 0;
+          display: flex;
+          flex-direction: column;
+          padding-top: calc(env(safe-area-inset-top) + 16px);
+          transform: translateX(-100%);
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cl-sb.open {
+          transform: translateX(0);
+        }
+        .cl-sb-bd {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.25);
+          backdrop-filter: blur(2px);
+          z-index: 299;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cl-sb-bd.open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .cl-sb-row {
+          padding: 10px 20px;
+          cursor: pointer;
+          border-radius: 12px;
+          margin: 2px 8px;
+          transition: background 0.15s ease;
+        }
+        .cl-sb-row:hover { background: #F4EFE6; }
+        .cl-sb-row.active {
+          background: #F4EFE6;
+          border-left: 3px solid #C96A4A;
+          padding-left: 17px;
         }
       `}</style>
+
+      {/* ── Sidebar backdrop ──────────────────────────────────────── */}
+      <div className={`cl-sb-bd${sidebarOpen ? " open" : ""}`} onClick={() => setSidebarOpen(false)} />
+
+      {/* ── History sidebar ───────────────────────────────────────── */}
+      <div className={`cl-sb${sidebarOpen ? " open" : ""}`}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 12px 20px", flexShrink: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 600, color: "#1A1A1A", fontFamily: "system-ui, -apple-system, 'Inter', sans-serif" }}>scheduled.ai</span>
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            onClick={() => setSidebarOpen(false)}
+            style={{ width: 32, height: 32, borderRadius: "50%", background: "#F0EDE8", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#555" }}
+          >✕</button>
+        </div>
+
+        {/* New chat button */}
+        <button
+          type="button"
+          onClick={() => { resetConversation(); setActiveHistoryId(null); setSidebarOpen(false); }}
+          style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 16px", padding: "10px 16px", background: "#F4EFE6", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, color: "#2D2D2D", fontFamily: "system-ui, -apple-system, 'Inter', sans-serif", width: "calc(100% - 32px)", boxSizing: "border-box" }}
+        >
+          <PencilIcon />
+          New chat
+        </button>
+
+        {/* Section label */}
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#AAAAAA", letterSpacing: "0.08em", textTransform: "uppercase", padding: "20px 20px 8px 20px", flexShrink: 0 }}>Recent</div>
+
+        {/* History list */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {mockHistory.map((item) => (
+            <div
+              key={item.id}
+              className={`cl-sb-row${activeHistoryId === item.id ? " active" : ""}`}
+              onClick={() => { setActiveHistoryId(item.id); setSidebarOpen(false); }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 500, color: "#1A1A1A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</div>
+              <div style={{ fontSize: 12, color: "#999", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.preview}</div>
+              <div style={{ fontSize: 11, color: "#BBBBBB", marginTop: 2 }}>{item.date}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Settings row */}
+        <div style={{ padding: "16px 20px", borderTop: "1px solid #F0EDE8", fontSize: 14, color: "#888", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, cursor: "pointer", fontFamily: "system-ui, -apple-system, 'Inter', sans-serif" }}>
+          <GearIcon />
+          Settings
+        </div>
+      </div>
 
       {/* ── Week dropdown backdrop ─────────────────────────────── */}
       {weekOpen && (
@@ -567,6 +700,7 @@ export function ClaudeMobileUI() {
           <button
             type="button"
             aria-label="Menu"
+            onClick={() => setSidebarOpen(true)}
             style={{
               width: 40, height: 40, borderRadius: "50%",
               backgroundColor: "#EFEFEF", border: "none", cursor: "pointer",
