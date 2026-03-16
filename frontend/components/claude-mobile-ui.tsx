@@ -306,6 +306,23 @@ export function ClaudeMobileUI() {
         .claude-textarea::placeholder { color: #AAAAAA; }
         .claude-pill-input::placeholder { color: #9B9B9B; }
 
+        /* ── Overscroll bounce fix: prevent rubber-band gap ── */
+        html, body {
+          overscroll-behavior-y: none;
+          background-color: #F9F6F1;
+        }
+
+        /* ── Navbar backstop: extends cream above viewport for iOS bounce ── */
+        .cl-nav-bg {
+          position: fixed;
+          top: -100px;
+          left: 0;
+          width: 100%;
+          height: calc(60px + env(safe-area-inset-top) + 100px);
+          background: #F9F6F1;
+          z-index: 99;
+        }
+
         /* ── Navbar: always fixed, cream fills status bar zone ── */
         .cl-nav {
           position: fixed;
@@ -314,7 +331,7 @@ export function ClaudeMobileUI() {
           right: 0;
           z-index: 100;
           background: #F9F6F1;
-          padding-top: env(safe-area-inset-top);
+          padding-top: calc(env(safe-area-inset-top) + 12px);
         }
 
         /* ── Content offset: 60px bar + safe-area-inset-top ── */
@@ -324,8 +341,8 @@ export function ClaudeMobileUI() {
         /* ── Input bar: idle (pill) ── */
         .cl-iw {
           position: sticky;
-          bottom: 0;
-          margin: 0 12px 12px;
+          bottom: calc(env(safe-area-inset-bottom) + 12px);
+          margin: 0 12px 0;
           z-index: 10;
         }
         .cl-ic {
@@ -434,6 +451,12 @@ export function ClaudeMobileUI() {
             box-shadow: 0 0 40px rgba(0,0,0,0.08);
           }
 
+          .cl-nav-bg {
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 448px !important;
+          }
+
           .cl-nav {
             position: fixed !important;
             top: 0 !important;
@@ -509,6 +532,9 @@ export function ClaudeMobileUI() {
           padding: 0,
         }}
       >
+        {/* ── Navbar bounce backstop ── */}
+        <div className="cl-nav-bg" />
+
         {/* ── Nav ──────────────────────────────────────────────── */}
         <nav
           className="cl-nav"
