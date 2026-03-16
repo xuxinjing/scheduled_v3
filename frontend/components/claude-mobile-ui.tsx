@@ -483,56 +483,69 @@ export function ClaudeMobileUI() {
           color: #1A1A1A;
         }
 
-        /* ── Desktop: phone-frame centered on white page ── */
+        /* ── Desktop: full-width web app layout ── */
         @media (min-width: 768px) {
-          body { background-color: #FFFFFF; }
+          body { background-color: #F9F6F1; }
 
+          /* Full-width — no phone frame, no box-shadow */
           .cl-col {
-            width: 448px !important;
-            max-width: 448px !important;
-            margin: 0 auto !important;
-            overflow: hidden !important;
-            box-shadow: 0 0 40px rgba(0,0,0,0.08);
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
             position: relative !important;
           }
 
+          /* Navbar backstop: full width */
           .cl-nav-bg {
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            width: 448px !important;
+            left: 0 !important;
+            transform: none !important;
+            width: 100% !important;
           }
 
+          /* Navbar: full width, 24px side padding */
           .cl-nav {
             position: fixed !important;
             top: 0 !important;
-            left: 50% !important;
-            right: auto !important;
-            transform: translateX(-50%) !important;
-            width: 448px !important;
+            left: 0 !important;
+            right: 0 !important;
+            transform: none !important;
+            width: 100% !important;
             padding-top: calc(10px + env(safe-area-inset-top)) !important;
-            padding-right: 16px !important;
+            padding-right: 24px !important;
             padding-bottom: 10px !important;
-            padding-left: 16px !important;
+            padding-left: 24px !important;
             z-index: 300 !important;
             background-color: #F9F6F1 !important;
+            box-sizing: border-box !important;
           }
 
           .cl-empty { padding-top: calc(60px + env(safe-area-inset-top)) !important; }
           .cl-msgs  { padding-top: calc(60px + env(safe-area-inset-top)) !important; }
 
-          /* both idle and active anchor to column center */
+          /* Message content: centered readable column */
+          .cl-msgs-inner {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 0 24px;
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          /* Input bar: centered, wider desktop max-width */
           .cl-iw,
           .cl-iw-on {
             position: fixed !important;
             bottom: 16px !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
-            width: calc(448px - 32px) !important;
+            width: min(680px, calc(100vw - 48px)) !important;
             margin: 0 !important;
             right: auto !important;
           }
 
-          /* Desktop: sidebar scoped to column via position: absolute */
+          /* Sidebar: absolute within the full-width column */
           .cl-sb {
             position: absolute !important;
             top: 0 !important;
@@ -811,25 +824,27 @@ export function ClaudeMobileUI() {
               paddingBottom: 130 + keyboardHeight,
             }}
           >
-            {messages.map((msg: Message, i: number) => {
-              const prev = messages[i - 1];
-              return (
-                <div key={i}>
-                  {msg.role === "user" && <UserBubble content={msg.content} />}
-                  {msg.role === "assistant" && prev?.role === "user" && <Separator />}
-                  {msg.role === "assistant" && <AssistantMessage content={msg.content} />}
+            <div className="cl-msgs-inner">
+              {messages.map((msg: Message, i: number) => {
+                const prev = messages[i - 1];
+                return (
+                  <div key={i}>
+                    {msg.role === "user" && <UserBubble content={msg.content} />}
+                    {msg.role === "assistant" && prev?.role === "user" && <Separator />}
+                    {msg.role === "assistant" && <AssistantMessage content={msg.content} />}
+                  </div>
+                );
+              })}
+
+              {pending && (
+                <div>
+                  <Separator />
+                  <AssistantMessage content="…" />
                 </div>
-              );
-            })}
+              )}
 
-            {pending && (
-              <div>
-                <Separator />
-                <AssistantMessage content="…" />
-              </div>
-            )}
-
-            <div ref={endRef} />
+              <div ref={endRef} />
+            </div>
           </div>
         )}
 
