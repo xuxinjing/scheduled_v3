@@ -300,8 +300,6 @@ textarea {
 
 @media (min-width: 768px) {
   body {
-    display: flex;
-    justify-content: center;
-    background-color: #FFFFFF;
+    background-color: #F9F6F1;
   }
 }
