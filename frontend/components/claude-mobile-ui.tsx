@@ -90,14 +90,9 @@ function MicIcon({ color = "#9B9B9B" }: { color?: string }) {
 
 function WaveformIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <line x1="2"  y1="12" x2="2"  y2="12" />
-      <line x1="5"  y1="9"  x2="5"  y2="15" />
-      <line x1="8"  y1="6"  x2="8"  y2="18" />
-      <line x1="11" y1="4"  x2="11" y2="20" />
-      <line x1="14" y1="6"  x2="14" y2="18" />
-      <line x1="17" y1="9"  x2="17" y2="15" />
-      <line x1="20" y1="11" x2="20" y2="13" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
     </svg>
   );
 }
