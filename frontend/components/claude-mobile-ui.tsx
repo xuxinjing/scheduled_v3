@@ -584,10 +584,16 @@ export function ClaudeMobileUI() {
           flex-direction: column;
           padding-top: calc(env(safe-area-inset-top) + 16px);
           transform: translateX(-100%);
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          /* visibility hidden on close hides the box-shadow bleed at x=0 */
+          visibility: hidden;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      visibility 0s linear 0.3s;
         }
         .cl-sb.open {
           transform: translateX(0);
+          visibility: visible;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      visibility 0s linear 0s;
         }
         .cl-sb-bd {
           position: fixed;
@@ -884,18 +890,19 @@ export function ClaudeMobileUI() {
             <h1
               style={{
                 fontFamily: "'Tiempos Text', Georgia, 'Times New Roman', serif",
-                fontSize: 28,
+                fontSize: "clamp(18px, 3vw, 32px)",
                 fontWeight: 600,
                 color: "#2D2D2D",
                 textAlign: "center",
                 lineHeight: 1.15,
-                maxWidth: 280,
+                whiteSpace: "nowrap",
+                width: "100%",
                 marginTop: 0,
                 marginBottom: 0,
                 letterSpacing: "-0.01em",
               }}
             >
-              Hi chef,<br />Ready to create schedule?
+              Hi chef, Ready to create schedule?
             </h1>
           </div>
         )}
