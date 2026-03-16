@@ -7,10 +7,14 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+from .api.chat import router as chat_router
+from .api.conversations import router as conversations_router
 from .api.email import router as email_router
 from .api.integrity import router as integrity_router
 from .api.restaurant import router as restaurant_router
 from .api.schedule import router as schedule_router
+from .api.solve import router as solve_router
+from .api.vapi_webhook import router as vapi_router
 from .core.settings import get_settings
 from .services.config_store import DATA_DIR
 
@@ -42,6 +46,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(chat_router, prefix="/api")
+app.include_router(conversations_router, prefix="/api")
+app.include_router(solve_router, prefix="/api")
+app.include_router(vapi_router, prefix="/api")
 app.include_router(restaurant_router, prefix="/api")
 app.include_router(schedule_router, prefix="/api")
 app.include_router(integrity_router, prefix="/api")

@@ -262,7 +262,7 @@ const NAV_BTN: CSSProps = {
 export function ClaudeMobileUI() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [inputFocused, setInputFocused] = useState(false);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showFab, setShowFab] = useState(false);
   const [pending, setPending] = useState(false);
@@ -270,16 +270,18 @@ export function ClaudeMobileUI() {
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [emptyStatePhase, setEmptyStatePhase] = useState<"visible" | "fading" | "gone">("visible");
 
-  const scrollRef    = useRef<HTMLDivElement>(null);
-  const endRef       = useRef<HTMLDivElement>(null);
-  const textareaRef  = useRef<HTMLTextAreaElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const vapiRef      = useRef<Vapi | null>(null);
+  const scrollRef          = useRef<HTMLDivElement>(null);
+  const endRef             = useRef<HTMLDivElement>(null);
+  const textareaRef        = useRef<HTMLTextAreaElement>(null);
+  const containerRef       = useRef<HTMLDivElement>(null);
+  const vapiRef            = useRef<Vapi | null>(null);
+  const inputGroupRef      = useRef<HTMLDivElement>(null);
+  const isChatExpandedRef  = useRef(false);
 
   // true when any conversation is active OR messages exist (persists after voice call-end)
   const isConversation = mode !== "idle" || messages.length > 0;
-  // true only when the text input bar is expanded (NOT during voice mode)
-  const isActiveInput  = inputFocused || mode === "text";
+  // true only when the text input bar is visually expanded (NOT during voice mode)
+  const isActiveInput  = isChatExpanded;
 
   const [keyboardHeight, setKeyboardHeight]   = useState(0);
 
@@ -321,7 +323,7 @@ export function ClaudeMobileUI() {
 
   /* iOS Safari visual viewport — push input bar above keyboard.
      rAF-debounced so keyboard animation frames don't trigger React re-renders;
-     CSS var --kb drives the input bar transform (GPU, no layout recalc). */
+     CSS var --kb drives the input group's bottom property (layout-based lift). */
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
@@ -386,22 +388,13 @@ export function ClaudeMobileUI() {
 
   /* Focus: expand container to exact scrollHeight + 80px (action row overhead) */
   const handleInputFocus = useCallback(() => {
-    setInputFocused(true);
+    setIsChatExpanded(true);
     const scrollH = textareaRef.current?.scrollHeight ?? 48;
     if (containerRef.current) {
       containerRef.current.style.maxHeight = `${scrollH + 80}px`;
     }
   }, []);
 
-  /* Blur: collapse container back to pill height */
-  const handleInputBlur = useCallback((isConv: boolean, pend: boolean) => {
-    if (!isConv && !pend) {
-      setInputFocused(false);
-      if (containerRef.current) {
-        containerRef.current.style.maxHeight = "48px";
-      }
-    }
-  }, []);
 
   /* Vapi instance + all event listeners — created once on mount */
   useEffect(() => {
@@ -446,6 +439,32 @@ export function ClaudeMobileUI() {
     return () => { vapi.removeAllListeners(); };
   }, []);
 
+  /* Keep ref in sync so outside-tap handler reads latest value without re-registering */
+  useEffect(() => { isChatExpandedRef.current = isChatExpanded; }, [isChatExpanded]);
+
+  /* Tap outside input group → collapse input, messages stay intact */
+  useEffect(() => {
+    const handleOutsideTap = (e: MouseEvent | TouchEvent) => {
+      if (
+        inputGroupRef.current &&
+        !inputGroupRef.current.contains(e.target as Node) &&
+        isChatExpandedRef.current
+      ) {
+        setIsChatExpanded(false);
+        textareaRef.current?.blur();
+        if (containerRef.current) {
+          containerRef.current.style.maxHeight = "48px";
+        }
+      }
+    };
+    document.addEventListener("touchstart", handleOutsideTap);
+    document.addEventListener("mousedown", handleOutsideTap);
+    return () => {
+      document.removeEventListener("touchstart", handleOutsideTap);
+      document.removeEventListener("mousedown", handleOutsideTap);
+    };
+  }, []);
+
   /* Voice: start call */
   const handleVoiceStart = async () => {
     enterConversation();
@@ -471,6 +490,7 @@ export function ClaudeMobileUI() {
       enterConversation();
       setMode("text");
     }
+    setIsChatExpanded(true);
 
     const userMsg: Message = { role: "user", content: text };
     setMessages(prev => [...prev, userMsg]);
@@ -527,7 +547,7 @@ export function ClaudeMobileUI() {
     setMessages([]);
     setInputValue("");
     setPending(false);
-    setInputFocused(false);
+    setIsChatExpanded(false);
     setMode("idle");
     setIsAgentSpeaking(false);
     setEmptyStatePhase("visible");
@@ -815,7 +835,7 @@ export function ClaudeMobileUI() {
 
           /* Input group: desktop fine-tuning only */
           .cl-ig {
-            bottom: 16px !important;
+            bottom: calc(16px + var(--kb, 0px)) !important;
             width: min(680px, calc(100vw - 48px)) !important;
           }
 
@@ -889,14 +909,13 @@ export function ClaudeMobileUI() {
         /* ── Input group: single fixed container, grows upward — never overlaps ── */
         .cl-ig {
           position: fixed;
-          bottom: calc(env(safe-area-inset-bottom) + 12px);
+          /* keyboard lift via bottom (layout property) — not transform */
+          bottom: calc(env(safe-area-inset-bottom) + 12px + var(--kb, 0px));
           left: 50%;
-          /* combine centering + keyboard-lift in one transform */
-          transform: translateX(-50%) translateY(calc(-1 * var(--kb, 0px)));
+          transform: translateX(-50%);
           width: calc(100% - 32px);
           max-width: 648px;
-          z-index: 10;
-          will-change: transform;
+          z-index: 100;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -927,13 +946,15 @@ export function ClaudeMobileUI() {
         .cl-vb-wrap {
           opacity: 1;
           transform: translateY(0);
-          transition: opacity 0.2s ease, transform 0.2s ease;
+          /* 0.1s delay on fade-in so voice button appears after input finishes collapsing */
+          transition: opacity 0.2s ease 0.1s, transform 0.2s ease 0.1s;
           pointer-events: auto;
         }
         .cl-vb-wrap.hidden {
           opacity: 0;
-          transform: translateY(8px);
           pointer-events: none;
+          /* No delay on hide — disappears immediately when input expands */
+          transition: opacity 0.15s ease, transform 0.15s ease;
         }
 
         /* Coral pulse dot */
@@ -1232,7 +1253,7 @@ export function ClaudeMobileUI() {
         )}
 
         {/* ── Input group: single fixed container — chat on top, voice on bottom ── */}
-        <div className="cl-ig">
+        <div className="cl-ig" ref={inputGroupRef}>
 
         {/* Chat input bar — display:none in voice to preserve typed text */}
         <div className={`cl-iw${isActiveInput ? " cl-iw-on" : ""}`} style={{ display: mode === "voice" ? "none" : undefined }}>
@@ -1278,7 +1299,6 @@ export function ClaudeMobileUI() {
                 placeholder="Reply to scheduled.ai"
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => { setInputValue(e.target.value); autoResize(); }}
                 onFocus={handleInputFocus}
-                onBlur={() => handleInputBlur(isConversation, pending)}
                 onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); }
                 }}
