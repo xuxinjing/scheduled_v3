@@ -15,17 +15,20 @@ const mockHistory: HistoryItem[] = [
   { id: 5, title: "Week of 02/23 schedule", preview: "Full crew except Tuesday", date: "Feb 23" },
 ];
 
-/* ── inline bold: **text** → <strong> ─────────────────────────── */
-function parseBold(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/).map((chunk, i) =>
-    chunk.startsWith("**") && chunk.endsWith("**") ? (
-      <strong key={i} style={{ fontWeight: 700 }}>
-        {chunk.slice(2, -2)}
-      </strong>
-    ) : (
-      chunk
-    ),
-  );
+/* ── Render markdown-lite: **bold** + paragraph breaks ─────────── */
+function renderContent(text: string) {
+  const paragraphs = text.split(/\n\n+/);
+  return paragraphs.map((para, pi) => (
+    <p key={pi} style={{ margin: 0, marginBottom: pi < paragraphs.length - 1 ? 12 : 0 }}>
+      {para.split(/(\*\*[^*]+\*\*)/).map((chunk, ci) =>
+        chunk.startsWith("**") && chunk.endsWith("**") ? (
+          <strong key={ci} style={{ fontWeight: 600 }}>{chunk.slice(2, -2)}</strong>
+        ) : (
+          chunk
+        )
+      )}
+    </p>
+  ));
 }
 
 /* ── SVG icons ─────────────────────────────────────────────────── */
@@ -156,15 +159,16 @@ function UserBubble({ content }: { content: string }) {
   return (
     <div
       style={{
+        alignSelf: "flex-end",
         backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        padding: "14px 16px",
-        margin: "8px 16px",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-        fontFamily: "'Courier New', monospace",
-        fontSize: 14,
-        color: "#2D2D2D",
-        lineHeight: 1.55,
+        borderRadius: "18px 18px 4px 18px",
+        padding: "12px 16px",
+        maxWidth: "80%",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+        fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
+        fontSize: 15,
+        color: "#1A1A1A",
+        lineHeight: 1.5,
       }}
     >
       {content}
@@ -172,31 +176,63 @@ function UserBubble({ content }: { content: string }) {
   );
 }
 
-function Separator() {
-  return (
-    <hr
-      style={{
-        border: "none",
-        borderTop: "1px solid #E0DAD0",
-        margin: "4px 0",
-      }}
-    />
-  );
-}
-
+/* AssistantMessage — drips characters via rAF; shows thinking dot while content is empty */
 function AssistantMessage({ content, streaming }: { content: string; streaming?: boolean }) {
+  const [displayed, setDisplayed] = React.useState("");
+  const rafRef  = React.useRef<number | undefined>(undefined);
+  const targetRef = React.useRef(content);
+  const posRef  = React.useRef(0);
+
+  React.useEffect(() => {
+    targetRef.current = content;
+
+    if (!streaming) {
+      // Stream done — cancel any running RAF and snap to final text
+      if (rafRef.current !== undefined) { cancelAnimationFrame(rafRef.current); rafRef.current = undefined; }
+      setDisplayed(content);
+      posRef.current = content.length;
+      return;
+    }
+
+    // Kick off drip only if not already running
+    if (rafRef.current !== undefined) return;
+
+    const tick = () => {
+      const target = targetRef.current;
+      if (posRef.current < target.length) {
+        // Advance ~3 chars/frame for natural pacing
+        posRef.current = Math.min(posRef.current + 3, target.length);
+        setDisplayed(target.slice(0, posRef.current));
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        rafRef.current = undefined;
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, [content, streaming]);
+
+  React.useEffect(() => {
+    return () => { if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current); };
+  }, []);
+
+  const showDot = streaming && displayed === "";
+
   return (
     <div
       style={{
-        padding: "12px 20px",
-        fontSize: 16,
-        lineHeight: 1.65,
+        alignSelf: "flex-start",
+        maxWidth: "100%",
+        fontSize: 15,
+        lineHeight: 1.7,
         color: "#2D2D2D",
         fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
+        padding: "0 4px",
       }}
     >
-      {parseBold(content)}
-      {streaming && <span className="cl-cursor">|</span>}
+      {showDot
+        ? <span className="cl-thinking-dot" />
+        : <>{renderContent(displayed)}{streaming && <span className="cl-cursor" />}</>
+      }
     </div>
   );
 }
@@ -229,6 +265,7 @@ export function ClaudeMobileUI() {
   const [inputValue, setInputValue] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [showFab, setShowFab] = useState(false);
   const [pending, setPending] = useState(false);
   const [mode, setMode] = useState<ChatMode>("idle");
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
@@ -315,7 +352,9 @@ export function ClaudeMobileUI() {
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 60);
+    const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setIsAtBottom(dist < 100);   // auto-scroll threshold
+    setShowFab(dist > 200);      // FAB threshold
   }, []);
 
   /* auto-scroll on new content or keyboard open/close */
@@ -490,6 +529,7 @@ export function ClaudeMobileUI() {
     setMode("idle");
     setIsAgentSpeaking(false);
     setEmptyStatePhase("visible");
+    setShowFab(false);
   }
 
   return (
@@ -498,17 +538,63 @@ export function ClaudeMobileUI() {
         .claude-textarea::placeholder { color: #AAAAAA; }
         .claude-pill-input::placeholder { color: #9B9B9B; }
 
-        /* ── Streaming cursor ── */
-        @keyframes cl-blink {
+        /* ── Thinking dot (breathe animation while LLM is responding) ── */
+        @keyframes cl-breathe {
+          0%, 100% { transform: scale(1); opacity: 0.4; }
+          50%       { transform: scale(1.5); opacity: 1; }
+        }
+        .cl-thinking-dot {
+          display: block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #C96A4A;
+          margin: 4px 0;
+          animation: cl-breathe 1.2s ease-in-out infinite;
+        }
+
+        /* ── Streaming cursor — solid 2px bar ── */
+        @keyframes cl-cursor-blink {
           0%, 100% { opacity: 1; }
           50%       { opacity: 0; }
         }
         .cl-cursor {
           display: inline-block;
+          width: 2px;
+          height: 1em;
+          background: #2D2D2D;
           margin-left: 2px;
-          font-weight: 300;
-          color: inherit;
-          animation: cl-blink 1s step-end infinite;
+          vertical-align: text-bottom;
+          animation: cl-cursor-blink 0.8s step-end infinite;
+        }
+
+        /* ── Message list inner — flex column, centred, generous gaps ── */
+        .cl-msgs-inner {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 24px 20px;
+          max-width: 680px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        /* ── Exchange separator between conversation turns ── */
+        .cl-ex-sep {
+          height: 1px;
+          background: #EAE5DC;
+          margin: 8px 0;
+          flex-shrink: 0;
+        }
+
+        /* ── Scroll-to-bottom FAB entrance ── */
+        @keyframes cl-fab-in {
+          from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .cl-fab {
+          animation: cl-fab-in 0.2s ease forwards;
         }
 
         /* ── Empty state: fade-out on conversation start ── */
@@ -1088,15 +1174,16 @@ export function ClaudeMobileUI() {
           >
             <div className="cl-msgs-inner">
               {messages.map((msg: Message, i: number) => {
-                const prev = messages[i - 1];
+                // Divider between exchanges: before every user message except the first
+                const isNewExchange = msg.role === "user" && i > 0;
                 return (
-                  <div key={i}>
+                  <React.Fragment key={i}>
+                    {isNewExchange && <div className="cl-ex-sep" />}
                     {msg.role === "user" && <UserBubble content={msg.content} />}
-                    {msg.role === "assistant" && prev?.role === "user" && <Separator />}
                     {msg.role === "assistant" && (
                       <AssistantMessage content={msg.content} streaming={msg.streaming} />
                     )}
-                  </div>
+                  </React.Fragment>
                 );
               })}
 
@@ -1105,23 +1192,25 @@ export function ClaudeMobileUI() {
           </div>
         )}
 
-        {/* ── Scroll-to-bottom button ──────────────────────────── */}
-        {isConversation && !isAtBottom && !isActiveInput && (
+        {/* ── Scroll-to-bottom FAB — appears when >200px from bottom ─── */}
+        {isConversation && showFab && (
           <button
             type="button"
             onClick={scrollToBottom}
             aria-label="Scroll to bottom"
+            className="cl-fab"
             style={{
               ...BTN,
               position: "fixed",
               bottom: 140,
               left: "50%",
               transform: "translateX(-50%)",
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               borderRadius: "50%",
-              backgroundColor: "rgba(255,255,255,0.92)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E5E0D8",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
               zIndex: 20,
             }}
           >
