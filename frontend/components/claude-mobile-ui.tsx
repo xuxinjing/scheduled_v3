@@ -175,46 +175,20 @@ function UserBubble({ content }: { content: string }) {
   );
 }
 
-/* AssistantMessage — drips characters via rAF; shows thinking dot while content is empty */
+/* AssistantMessage — renders streamed content with per-token CSS fade-in */
 function AssistantMessage({ content, streaming }: { content: string; streaming?: boolean }) {
-  const [displayed, setDisplayed] = React.useState("");
-  const rafRef  = React.useRef<number | undefined>(undefined);
-  const targetRef = React.useRef(content);
-  const posRef  = React.useRef(0);
+  // Track what was shown on the previous render to extract the newly arrived text
+  const prevContentRef = React.useRef("");
+  const prevContent = prevContentRef.current;
+  prevContentRef.current = content;
 
-  React.useEffect(() => {
-    targetRef.current = content;
+  // During streaming, split into already-shown base and newly-arrived token
+  const newText = (streaming && content.length > prevContent.length)
+    ? content.slice(prevContent.length)
+    : "";
+  const baseText = newText ? prevContent : content;
 
-    if (!streaming) {
-      // Stream done — cancel any running RAF and snap to final text
-      if (rafRef.current !== undefined) { cancelAnimationFrame(rafRef.current); rafRef.current = undefined; }
-      setDisplayed(content);
-      posRef.current = content.length;
-      return;
-    }
-
-    // Kick off drip only if not already running
-    if (rafRef.current !== undefined) return;
-
-    const tick = () => {
-      const target = targetRef.current;
-      if (posRef.current < target.length) {
-        // Advance ~3 chars/frame for natural pacing
-        posRef.current = Math.min(posRef.current + 3, target.length);
-        setDisplayed(target.slice(0, posRef.current));
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        rafRef.current = undefined;
-      }
-    };
-    rafRef.current = requestAnimationFrame(tick);
-  }, [content, streaming]);
-
-  React.useEffect(() => {
-    return () => { if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current); };
-  }, []);
-
-  const showDot = streaming && displayed === "";
+  const showDot = streaming && content === "";
 
   return (
     <div
@@ -230,7 +204,11 @@ function AssistantMessage({ content, streaming }: { content: string; streaming?:
     >
       {showDot
         ? <span className="cl-thinking-dot" />
-        : <>{renderContent(displayed)}{streaming && <span className="cl-cursor" />}</>
+        : <>
+            {renderContent(baseText)}
+            {newText && <span key={content.length} className="chat-stream-fadein">{newText}</span>}
+            {streaming && <span className="cl-cursor" />}
+          </>
       }
     </div>
   );
@@ -510,18 +488,31 @@ export function ClaudeMobileUI() {
 
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
+      let streamDone = false;
 
-      while (true) {
+      while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last?.streaming) {
-            return [...prev.slice(0, -1), { ...last, content: last.content + chunk }];
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+        for (const part of parts) {
+          for (const line of part.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6);
+            if (data === "[DONE]") { streamDone = true; break; }
+            const text = data.replace(/\\n/g, "\n");
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (last?.streaming) {
+                return [...prev.slice(0, -1), { ...last, content: last.content + text }];
+              }
+              return prev;
+            });
           }
-          return prev;
-        });
+          if (streamDone) break;
+        }
       }
     } catch {
       setMessages(prev => {
