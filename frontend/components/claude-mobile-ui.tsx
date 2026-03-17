@@ -469,28 +469,8 @@ export function ClaudeMobileUI() {
   const handleVoiceStart = async () => {
     enterConversation();
     setMode("voice");
-    // Use a transient assistant config — no VAPI dashboard setup required.
-    // Only NEXT_PUBLIC_VAPI_PUBLIC_KEY is needed.
-    await vapiRef.current?.start({
-      model: {
-        provider: "openai",
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a kitchen scheduling assistant for Acquerello. " +
-              "Help the head chef plan the weekly staff schedule by understanding their natural language requirements, " +
-              "clarifying constraints (days off, position coverage, split shifts), and confirming the plan. " +
-              "Keep responses concise and conversational.",
-          },
-        ],
-      },
-      voice: {
-        provider: "openai",
-        voiceId: "alloy",
-      },
-    });
+    // Pass assistant ID as string — Vapi.start(string) routes to the given assistant
+    await vapiRef.current?.start(process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID);
   };
 
   /* Voice: end call — set mode immediately for instant UI response */
