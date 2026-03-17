@@ -846,7 +846,7 @@ export function ChatUI() {
         />
       ) : (
         /* ─── Chat view — ChatGPT style ───────────────────── */
-        <div className="flex min-h-full flex-col bg-white pb-[max(env(safe-area-inset-bottom,8px),8px)]">
+        <div className="flex h-[calc(var(--vh,1vh)*100)] flex-col bg-white">
           <TopBar
             onOpenMenu={() => setMobileMenuOpen(true)}
             title="ChatGPT"
@@ -857,9 +857,9 @@ export function ChatUI() {
             }
           />
 
-          <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col px-4 pt-2 md:pt-4">
+          <div className="mx-auto flex w-full max-w-[720px] flex-1 min-h-0 flex-col px-4 pt-2 md:pt-4">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto pb-6">
+            <div className="flex-1 min-h-0 overflow-y-auto pb-6">
               <div className="flex flex-col gap-4">
                 {messages.length === 0 && !transcriptPreview && (
                   <div className="text-center py-12 text-[var(--chatgpt-text-secondary)] text-[15px]">
@@ -980,8 +980,8 @@ export function ChatUI() {
               </div>
             </div>
 
-            {/* Sticky input bar */}
-            <div className="sticky bottom-0 mx-auto w-full max-w-[720px] bg-white pb-1 pt-3">
+            {/* Input bar */}
+            <div className="mx-auto w-full max-w-[720px] bg-white pb-[max(env(safe-area-inset-bottom,8px),8px)] pt-3">
               <ChatInputBar
                 draft={draft}
                 onDraftChange={setDraft}
