@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def get_database_url() -> str:
-    default_sqlite_path = Path(__file__).resolve().parents[3] / "backend" / "data" / "app.db"
+    default_sqlite_path = Path(__file__).resolve().parents[2] / "data" / "app.db"
     return os.getenv("DATABASE_URL", f"sqlite:///{default_sqlite_path}")
 
 

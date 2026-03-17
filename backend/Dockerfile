@@ -13,6 +13,8 @@ COPY app /app/app
 COPY alembic /app/alembic
 COPY alembic.ini /app/alembic.ini
 
+RUN mkdir -p /app/data
+
 EXPOSE 8000
 
 CMD ["/bin/sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
