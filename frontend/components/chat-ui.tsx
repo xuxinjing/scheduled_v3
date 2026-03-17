@@ -36,12 +36,14 @@ type RestaurantSnapshot = {
 
 type ViewMode = "landing" | "voice" | "chat";
 
-const fakeConversations = [
-  { title: "Week of March 10", preview: "Chef off Tuesday, CDC back on Friday", active: true },
-  { title: "Week of March 3", preview: "Private dining added Thursday", active: false },
-  { title: "Week of February 24", preview: "Training shadows for garde manger", active: false },
-  { title: "Week of February 17", preview: "Peak service on Friday and Saturday", active: false },
-];
+type ConversationItem = {
+  id: string;
+  title: string;
+  preview: string;
+  date: string;
+  created_at: string;
+  selected_week: string;
+};
 
 const suggestions = [
   {
@@ -80,10 +82,16 @@ function MobileDrawer({
   open,
   onClose,
   onNewChat,
+  conversations,
+  onSelectConversation,
+  onDeleteConversation,
 }: {
   open: boolean;
   onClose: () => void;
   onNewChat: () => void;
+  conversations: ConversationItem[];
+  onSelectConversation: (id: string) => void;
+  onDeleteConversation: (id: string) => void;
 }) {
   return (
     <>
@@ -133,22 +141,39 @@ function MobileDrawer({
         {/* Conversations */}
         <div className="mt-1 flex-1 overflow-y-auto px-2">
           <div className="space-y-0.5">
-            {fakeConversations.map((conversation) => (
-              <button
-                key={conversation.title}
-                type="button"
-                onClick={onClose}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors",
-                  conversation.active ? "bg-[var(--chatgpt-hover)]" : "hover:bg-[var(--chatgpt-hover)]",
-                )}
+            {conversations.length === 0 && (
+              <p className="px-3 py-4 text-[13px] text-[var(--chatgpt-text-secondary)]">No conversations yet</p>
+            )}
+            {conversations.map((conversation) => (
+              <div
+                key={conversation.id}
+                className="group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--chatgpt-hover)]"
               >
-                <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() => {
+                    onSelectConversation(conversation.id);
+                    onClose();
+                  }}
+                >
                   <p className="truncate text-[14px] font-medium text-[var(--chatgpt-text)]">{conversation.title}</p>
-                  <p className="mt-0.5 truncate text-[12px] text-[var(--chatgpt-text-secondary)]">{conversation.preview}</p>
-                </div>
-                <ChevronRight className="ml-2 h-4 w-4 flex-shrink-0 text-[#c5c5c5]" />
-              </button>
+                  <p className="mt-0.5 truncate text-[12px] text-[var(--chatgpt-text-secondary)]">
+                    {conversation.date ? `${conversation.date} · ` : ""}{conversation.preview}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteConversation(conversation.id);
+                  }}
+                  className="ml-2 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-[var(--chatgpt-text-secondary)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
+                  aria-label="Delete conversation"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -488,16 +513,26 @@ export function ChatUI() {
   const [emailRecipient, setEmailRecipient] = useState("");
   const [emailStatus, setEmailStatus] = useState("");
   const [restaurantSnapshot, setRestaurantSnapshot] = useState<RestaurantSnapshot | null>(null);
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  function fetchConversations() {
+    void fetch("/api/conversations", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data: ConversationItem[]) => setConversations(Array.isArray(data) ? data : []))
+      .catch(() => undefined);
+  }
 
   useEffect(() => {
     void fetch("/api/restaurant", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload: RestaurantSnapshot) => {
+      .then((response) => (response.ok ? response.json() : undefined))
+      .then((payload: RestaurantSnapshot | undefined) => {
+        if (!payload) return;
         setRestaurantSnapshot(payload);
         setEmailRecipient(payload.restaurant_config?.email_config?.default_recipient ?? "");
       })
       .catch(() => undefined);
+    fetchConversations();
   }, []);
 
   useEffect(() => {
@@ -536,6 +571,7 @@ export function ChatUI() {
       setError(caughtError instanceof Error ? caughtError.message : "Chat request failed");
     } finally {
       setPendingReply(false);
+      fetchConversations();
     }
   }
 
@@ -600,7 +636,12 @@ export function ChatUI() {
             ?.slice(5)
             .trim();
           if (!dataLine) continue;
-          const event = JSON.parse(dataLine) as ReasoningEvent;
+          let event: ReasoningEvent;
+          try {
+            event = JSON.parse(dataLine) as ReasoningEvent;
+          } catch {
+            continue;
+          }
           if (event.type === "complete" && event.content) {
             const completed = event.content as ScheduleRun;
             setSchedule(completed);
@@ -644,6 +685,38 @@ export function ChatUI() {
     setVoiceAutoStart(true);
   }
 
+  async function selectConversation(id: string) {
+    try {
+      const response = await fetch(`/api/conversations/${id}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const conv = (await response.json()) as {
+        id: string;
+        selected_week: string;
+        messages: Array<{ role: string; content: string }>;
+      };
+      setMessages(
+        conv.messages.map((m) => ({
+          id: messageId(m.role),
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          createdAt: new Date().toISOString(),
+        })),
+      );
+      setView("chat");
+    } catch {
+      // ignore
+    }
+  }
+
+  async function deleteConversation(id: string) {
+    try {
+      await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+      fetchConversations();
+    } catch {
+      // ignore
+    }
+  }
+
   function resetAll() {
     setView("landing");
     setDraft("");
@@ -663,6 +736,9 @@ export function ChatUI() {
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         onNewChat={resetAll}
+        conversations={conversations}
+        onSelectConversation={(id) => void selectConversation(id)}
+        onDeleteConversation={(id) => void deleteConversation(id)}
       />
 
       {view === "landing" ? (
