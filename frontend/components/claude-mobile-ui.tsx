@@ -1068,8 +1068,8 @@ export function ClaudeMobileUI() {
         className="cl-col"
         style={{
           width: "100vw",
-          height: isConversation ? "100vh" : undefined,
-          minHeight: "100vh",
+          height: isConversation ? "calc(var(--vh, 1vh) * 100)" : undefined,
+          minHeight: "calc(var(--vh, 1vh) * 100)",
           backgroundColor: "#F9F6F1",
           display: "flex",
           flexDirection: "column",
