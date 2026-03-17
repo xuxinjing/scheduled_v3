@@ -25,6 +25,8 @@ class Settings:
     s3_region: str | None
     s3_endpoint_url: str | None
     s3_public_base_url: str | None
+    vapi_server_secret: str | None
+    vapi_server_url: str | None
 
     @property
     def is_production(self) -> bool:
@@ -69,4 +71,6 @@ def get_settings() -> Settings:
         s3_region=os.getenv("S3_REGION"),
         s3_endpoint_url=os.getenv("S3_ENDPOINT_URL"),
         s3_public_base_url=os.getenv("S3_PUBLIC_BASE_URL"),
+        vapi_server_secret=os.getenv("VAPI_SERVER_SECRET"),
+        vapi_server_url=os.getenv("VAPI_SERVER_URL"),
     )
