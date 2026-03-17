@@ -200,6 +200,16 @@ textarea {
   line-height: 1.6;
 }
 
+/* Streaming token fade-in */
+@keyframes stream-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.chat-stream-fadein {
+  animation: stream-fadein 150ms ease-in both;
+}
+
 /* Voice orb animation */
 @keyframes orb-float {
   0%, 100% { transform: translateY(0) scale(1); }

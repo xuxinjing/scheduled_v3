@@ -468,8 +468,46 @@ function VoiceCaptureView({
   );
 }
 
+/* ─── Markdown-lite renderer ──────────────────────────────────── */
+function renderInline(text: string) {
+  return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/).map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**"))
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*"))
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
+
+function renderContent(text: string) {
+  const paragraphs = text.split(/\n\n+/);
+  return paragraphs.map((para, pi) => {
+    const lines = para.split("\n");
+    const isBulletList = lines.some((l) => /^[-*]\s/.test(l));
+    if (isBulletList) {
+      return (
+        <ul key={pi} className="list-disc pl-5 my-1.5">
+          {lines.filter((l) => /^[-*]\s/.test(l)).map((item, ii) => (
+            <li key={ii}>{renderInline(item.replace(/^[-*]\s/, ""))}</li>
+          ))}
+        </ul>
+      );
+    }
+    return (
+      <p key={pi} className={pi < paragraphs.length - 1 ? "mb-3" : ""}>
+        {lines.map((line, li) => (
+          <span key={li}>
+            {li > 0 && <br />}
+            {renderInline(line)}
+          </span>
+        ))}
+      </p>
+    );
+  });
+}
+
 /* ─── Message bubble — ChatGPT style ─────────────────────────── */
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStreaming?: boolean }) {
   const isAssistant = message.role === "assistant";
   return (
     <div className={cn("flex w-full", isAssistant ? "justify-start" : "justify-end")}>
@@ -485,9 +523,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             isAssistant
               ? "chatgpt-message-assistant text-[var(--chatgpt-text)]"
               : "chatgpt-message-user text-[var(--chatgpt-text)]",
+            isStreaming && "chat-stream-fadein",
           )}
         >
-          {message.content}
+          {isAssistant ? renderContent(message.content) : message.content}
         </div>
       </div>
     </div>
@@ -569,22 +608,30 @@ export function ChatUI() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
+      let streamDone = false;
 
-      while (true) {
+      while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        // Parse SSE lines: "data: <content>\n\n"
-        for (const line of chunk.split("\n")) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6);
-          if (data === "[DONE]") break;
-          const text = data.replace(/\\n/g, "\n");
-          setMessages((current) =>
-            current.map((m) =>
-              m.id === assistantId ? { ...m, content: m.content + text } : m,
-            ),
-          );
+        // { stream: true } handles UTF-8 sequences split across chunks
+        buffer += decoder.decode(value, { stream: true });
+        // SSE events are delimited by double newlines
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+        for (const part of parts) {
+          for (const line of part.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6);
+            if (data === "[DONE]") { streamDone = true; break; }
+            const text = data.replace(/\\n/g, "\n");
+            setMessages((current) =>
+              current.map((m) =>
+                m.id === assistantId ? { ...m, content: m.content + text } : m,
+              ),
+            );
+          }
+          if (streamDone) break;
         }
       }
     } catch (caughtError) {
@@ -820,8 +867,12 @@ export function ChatUI() {
                   </div>
                 )}
 
-                {messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} />
+                {messages.map((message, idx) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    isStreaming={pendingReply && idx === messages.length - 1 && message.role === "assistant"}
+                  />
                 ))}
 
                 {transcriptPreview && (
