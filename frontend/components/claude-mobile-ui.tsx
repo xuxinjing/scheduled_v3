@@ -1198,7 +1198,6 @@ export function ClaudeMobileUI() {
             style={{
               flex: 1,
               overflowY: "auto",
-              paddingTop: 4,
               paddingBottom: 185 + keyboardHeight, /* chat bar ~60px + gap 10px + voice bar ~56px + 12px bottom + extra */
             }}
           >
