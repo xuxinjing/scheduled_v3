@@ -1,49 +1,63 @@
-import { NextResponse } from "next/server";
-
-import { generateSchedulingReply } from "@/lib/ai";
 import { getBackendUrl } from "@/lib/env";
-import type { ChatMessage } from "@/lib/types";
 
 export async function POST(request: Request) {
+  let backendUrl: string;
   try {
-    const body = (await request.json()) as { messages?: ChatMessage[] };
-    if (!body.messages?.length) {
-      return NextResponse.json({ error: "messages are required" }, { status: 400 });
-    }
-
-    let restaurantSnapshot:
-      | {
-          restaurant_config?: {
-            name?: string;
-            employees?: Array<{
-              name: string;
-              role: string;
-              preferred_stations?: string[];
-              training_on?: string[];
-              capabilities?: Record<string, string>;
-            }>;
-          };
-          week_config?: unknown;
-        }
-      | undefined;
-    try {
-      const response = await fetch(`${getBackendUrl()}/api/restaurant`, { cache: "no-store" });
-      if (response.ok) {
-        restaurantSnapshot = (await response.json()) as typeof restaurantSnapshot;
-      }
-    } catch {
-      restaurantSnapshot = undefined;
-    }
-
-    const payload = await generateSchedulingReply(body.messages, {
-      restaurantConfig: restaurantSnapshot?.restaurant_config,
-      baselineWeekConfig: restaurantSnapshot?.week_config,
+    backendUrl = getBackendUrl();
+  } catch {
+    return new Response(JSON.stringify({ error: "BACKEND_URL is not configured" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
     });
-    return NextResponse.json(payload);
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Chat request failed" },
-      { status: 500 },
-    );
   }
+
+  const body = (await request.json()) as {
+    messages?: Array<{ role: string; content: string }>;
+    selectedWeek?: string;
+    conversation_id?: string;
+  };
+
+  const messages = body.messages ?? [];
+
+  // Split messages into history + the final user message, as the backend expects
+  let lastUserIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") {
+      lastUserIdx = i;
+      break;
+    }
+  }
+
+  const message = lastUserIdx >= 0 ? messages[lastUserIdx].content : "";
+  const history = messages.slice(0, lastUserIdx);
+
+  const backendPayload = {
+    message,
+    history,
+    selected_week: body.selectedWeek ?? "",
+    conversation_id: body.conversation_id ?? null,
+  };
+
+  const backendRes = await fetch(`${backendUrl}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(backendPayload),
+  });
+
+  if (!backendRes.ok || !backendRes.body) {
+    const text = await backendRes.text().catch(() => "Backend request failed");
+    return new Response(JSON.stringify({ error: text }), {
+      status: backendRes.status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Pass the SSE stream straight through to the browser
+  return new Response(backendRes.body, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

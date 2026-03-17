@@ -548,26 +548,51 @@ export function ChatUI() {
   async function requestAssistantReply(nextMessages: ChatMessage[]) {
     setPendingReply(true);
     setError("");
+
+    // Add an empty streaming assistant bubble
+    const assistantId = messageId("assistant");
+    setMessages((current) => [
+      ...current,
+      { id: assistantId, role: "assistant", content: "", createdAt: new Date().toISOString() },
+    ]);
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: nextMessages }),
       });
-      const payload = (await response.json()) as ChatResponse & { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Chat request failed");
-      setWeekConfig(payload.weekConfig);
-      setConfirmationReady(payload.confirmationReady);
-      setMessages((current) => [
-        ...current,
-        {
-          id: messageId("assistant"),
-          role: "assistant",
-          content: payload.reply,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      if (!response.ok || !response.body) {
+        const text = await response.text().catch(() => "Chat request failed");
+        throw new Error(text);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        // Parse SSE lines: "data: <content>\n\n"
+        for (const line of chunk.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6);
+          if (data === "[DONE]") break;
+          const text = data.replace(/\\n/g, "\n");
+          setMessages((current) =>
+            current.map((m) =>
+              m.id === assistantId ? { ...m, content: m.content + text } : m,
+            ),
+          );
+        }
+      }
     } catch (caughtError) {
+      setMessages((current) =>
+        current.map((m) =>
+          m.id === assistantId ? { ...m, content: "Something went wrong." } : m,
+        ),
+      );
       setError(caughtError instanceof Error ? caughtError.message : "Chat request failed");
     } finally {
       setPendingReply(false);
